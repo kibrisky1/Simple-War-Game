@@ -1166,12 +1166,6 @@
                     app.highlightedMoveCells = [];
                     app.highlightedAttackCells = [];
                     addGameMessage("Unità deselezionata.");
-                } else if (clickedUnit.team === 'player' && app.isPlayerTurn) {
-                    // Seleziona un'unità del giocatore durante il suo turno
-                    app.selectedUnit = clickedUnit;
-                    app.highlightedMoveCells = getReachableCells(clickedUnit);
-                    app.highlightedAttackCells = getAttackableCells(clickedUnit);
-                    addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). MP: ${clickedUnit.mp}, AP: ${clickedUnit.ap}`);
                 } else if (app.selectedUnit && app.selectedUnit.team === 'player' && clickedUnit.team === 'enemy' && app.highlightedAttackCells.some(c => c.x === gridX && c.y === gridY)) {
                     // Attacca un'unità nemica se una unità del giocatore è selezionata e l'attacco è possibile
                     if (app.selectedUnit.ap > 0) {
@@ -1180,7 +1174,20 @@
                         addGameMessage("Questa unità ha esaurito i Punti Azione (AP).");
                     }
                 } else {
-                    addGameMessage("Non puoi selezionare questa unità o non è il tuo turno.");
+                    // Seleziona qualsiasi unità per l'ispezione, ma consenti azioni solo se è il turno/squadra corretto
+                    app.selectedUnit = clickedUnit;
+                    app.highlightedMoveCells = []; // Cancella le evidenziazioni per qualsiasi nuova selezione
+                    app.highlightedAttackCells = []; // Cancella le evidenziazioni per qualsiasi nuova selezione
+
+                    if (clickedUnit.team === 'player' && app.isPlayerTurn) {
+                        // Se è un'unità del giocatore e il turno del giocatore, calcola le evidenziazioni
+                        app.highlightedMoveCells = getReachableCells(clickedUnit);
+                        app.highlightedAttackCells = getAttackableCells(clickedUnit);
+                        addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). MP: ${clickedUnit.mp}, AP: ${clickedUnit.ap}`);
+                    } else {
+                        // Unità selezionata, ma non può agire (es. unità nemica durante il turno del giocatore, o unità del giocatore durante il turno del nemico)
+                        addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). Non puoi agire con questa unità in questo momento.`);
+                    }
                 }
             } else if (app.selectedUnit) {
                 // Se un'unità è selezionata e si clicca su una cella vuota
