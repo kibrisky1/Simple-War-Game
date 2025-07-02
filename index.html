@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulatore di Mappe di Guerra (PvP)</title>
+    <title>Simulatore di Mappe di Guerra (PvP/PvB)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -57,6 +57,45 @@
             background-color: #4a5568;
             border-radius: 6px;
         }
+
+        /* Stili per il Minigioco */
+        #minigame-modal {
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        #minigame-bar-container {
+            height: 24px; /* Altezza della barra */
+            background-color: #1a202c; /* Sfondo scuro della barra */
+            border: 1px solid #4a5568;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto; /* Centra la barra */
+        }
+        #minigame-target-zone {
+            background-color: #22c55e; /* Verde per la zona target */
+            border-radius: 12px;
+            position: absolute;
+            height: 100%;
+            opacity: 0.8;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+        #minigame-perfect-zone {
+            background-color: #facc15; /* Giallo per la zona perfetta */
+            border-radius: 12px;
+            position: absolute;
+            height: 100%;
+            opacity: 0.9;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+        }
+        #minigame-indicator {
+            background-color: #3b82f6; /* Blu per l'indicatore */
+            border-radius: 12px;
+            position: absolute;
+            height: 100%;
+            width: 8px; /* Larghezza dell'indicatore */
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+            transform: translateX(-50%); /* Centra l'indicatore sul suo punto left */
+        }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex overflow-hidden">
@@ -74,6 +113,29 @@
                 <option value="fantasy">Regno Fantasy</option>
                 <option value="custom">Sandbox Globale</option>
             </select>
+        </div>
+
+        <!-- Selezione Modalità di Gioco -->
+        <div class="bg-gray-800 p-3 rounded-lg">
+            <h2 class="text-lg font-semibold mb-2 text-center">Modalità di Gioco</h2>
+            <div class="flex justify-center space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="game-mode" value="player-vs-player" class="form-radio text-blue-500" checked>
+                    <span class="ml-2">Giocatore vs Giocatore</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="game-mode" value="player-vs-bot" class="form-radio text-blue-500">
+                    <span class="ml-2">Giocatore vs Bot</span>
+                </label>
+            </div>
+            <div id="bot-difficulty-section" class="mt-3 hidden">
+                <label for="bot-difficulty-select" class="block text-sm font-medium text-gray-400 mb-1">Difficoltà Bot</label>
+                <select id="bot-difficulty-select" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="easy">Facile</option>
+                    <option value="medium">Medio</option>
+                    <option value="hard">Difficile</option>
+                </select>
+            </div>
         </div>
 
         <!-- Gestione Turno e Statistiche -->
@@ -100,6 +162,15 @@
             <h2 class="text-lg font-semibold mb-3 text-center">Unità Disponibili</h2>
             <div id="unit-list" class="grid grid-cols-3 gap-4 text-center">
                 <!-- Le unità verranno popolate dinamicamente qui -->
+            </div>
+            <div class="mt-4 border-t border-gray-700 pt-4">
+                <h3 class="text-md font-semibold mb-2 text-center">Posizionamento Rapido</h3>
+                <button id="add-player-fair-units-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 mb-2">
+                    Aggiungi Unità Giocatore
+                </button>
+                <button id="add-enemy-fair-units-btn" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                    Aggiungi Unità Nemico
+                </button>
             </div>
         </div>
 
@@ -132,15 +203,19 @@
         <div class="bg-gray-800 p-3 rounded-lg text-sm text-gray-300">
             <h3 class="font-semibold text-center mb-2">Come si Usa</h3>
             <ul class="list-disc list-inside space-y-1">
-                <li>Scegli una linea temporale per caricare mappa e scenario.</li>
-                <li>Clicca/Tocca un'unità nella palette per selezionarla e posizionarla.</li>
+                <li>Scegli una linea temporale per caricare mappa e unità disponibili.</li>
+                <li>Seleziona la modalità di gioco (Giocatore vs Giocatore o Giocatore vs Bot).</li>
+                <li>Clicca/Tocca un'unità nella palette per selezionarla.</li>
+                <li>Clicca/Tocca su una cella vuota della mappa per posizionare l'unità.</li>
                 <li>Clicca/Tocca un'unità sulla mappa per selezionarla.</li>
                 <li>Le celle verdi indicano il movimento, le rosse l'attacco.</li>
                 <li>Clicca/Tocca su una cella verde per muovere l'unità selezionata.</li>
                 <li>Clicca/Tocca su una cella rossa (con unità nemica) per attaccare.</li>
+                <li>Durante l'attacco, clicca "STOP!" quando l'indicatore è nella zona verde per il massimo danno.</li>
                 <li>Clicca col tasto destro/Premi a lungo su un'unità per rimuoverla.</li>
                 <li>In "Sandbox Globale" o "Regno Fantasy", usa "Genera Mappa Casuale" per creare un nuovo campo di battaglia.</li>
                 <li>Trascina la mappa con il mouse/un dito, usa la rotellina/pizzica per lo zoom.</li>
+                <li>Usa "Aggiungi Unità Giocatore/Nemico" per posizionare un set bilanciato di unità.</li>
             </ul>
         </div>
     </div>
@@ -148,6 +223,22 @@
     <!-- Contenitore della Mappa Canvas -->
     <div id="map-wrapper" class="flex-grow">
         <canvas id="map-canvas"></canvas>
+    </div>
+
+    <!-- Minigioco Attacco Modal -->
+    <div id="minigame-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-700 p-6 rounded-lg shadow-xl w-96 text-center">
+            <h3 class="text-xl font-bold mb-4 text-yellow-300">Minigioco Attacco!</h3>
+            <p class="text-gray-300 mb-4">Clicca quando l'indicatore è nella zona verde per il massimo danno!</p>
+            <div id="minigame-bar-container" class="w-full h-8 bg-gray-900 rounded-full relative overflow-hidden mb-6">
+                <div id="minigame-target-zone" class="absolute h-full rounded-full"></div>
+                <div id="minigame-perfect-zone" class="absolute h-full rounded-full"></div>
+                <div id="minigame-indicator" class="absolute h-full rounded-full"></div>
+            </div>
+            <button id="minigame-stop-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition duration-300 transform hover:scale-105">
+                STOP!
+            </button>
+        </div>
     </div>
 
     <script>
@@ -163,7 +254,7 @@
             currentTimeline: 'ww2',
             mapImage: new Image(), // Per mappe predefinite (es. mappa del mondo)
             iconCache: {}, // Cache per icone pre-renderizzate
-            unitSize: 40, // Dimensione delle unità in pixel (visuale, non di griglia)
+            unitSize: 40, // Dimensione delle unità in pixel (visualale, non di griglia)
             playerDeaths: 0,
             enemyDeaths: 0,
             gameMessages: [],
@@ -187,7 +278,7 @@
             drawingMode: false, // Indica se è attiva la modalità di disegno manuale
             selectedTerrain: 'grass', // 'grass', 'water', 'mountain', 'forest', 'desert'
             terrainGrid: [], // Memorizza i dati del terreno per la mappa personalizzata (array 2D)
-            terrainColors: {
+            terrainColors: { // Fallback colors if images fail to load
                 grass: '#547494',    // Verde/blu più scuro per la terra
                 water: '#add3d6',    // Blu più chiaro per l'acqua
                 mountain: '#8B4513', // Marrone sella per le montagne
@@ -207,55 +298,134 @@
             touchStartY: 0,
             LONG_PRESS_THRESHOLD: 500, // ms
             TAP_MOVE_THRESHOLD: 10, // pixels
+
+            // Modalità Bot
+            gameMode: 'player-vs-player', // 'player-vs-player' o 'player-vs-bot'
+            botDifficulty: 'easy', // 'easy', 'medium', 'hard'
+
+            // Minigame Attacco
+            minigameAnimationId: null,
+            minigameStartTime: 0,
+            minigameResolve: null, // Per memorizzare la funzione resolve della promise
+            minigameBarVisualWidth: 300, // Larghezza visiva per i calcoli
+            minigameIndicatorWidth: 8,
+            minigameSpeed: 200, // pixel al secondo
+            minigameTargetZonePercent: 0.2, // 20% della larghezza della barra
+            minigamePerfectZonePercent: 0.05, // 5% della larghezza della barra
         };
 
-        // Placeholder per un'immagine della mappa del mondo.
-        // In un'applicazione reale, caricheresti qui un'immagine della mappa del mondo ad alta risoluzione.
-        const WORLD_MAP_PLACEHOLDER = 'https://placehold.co/1000x700/5a6d89/ffffff?text=Mappa+Mondo';
-
         // --- DATI E CONFIGURAZIONE ---
+        // Simplified pixel map of Europe for WW2 timeline
+        const WW2_PIXEL_MAP_DATA = [
+            // Row 0-1: North Sea / Scandinavia (simplified)
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water'], // Scandinavia, Baltic
+            ['water', 'water', 'grass', 'grass', 'grass', 'water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water'], // UK, Europe
+            ['water', 'water', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water'],
+            ['water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water'],
+            ['water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water'],
+            ['water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water'],
+            ['water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water'],
+            ['water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water'],
+            ['water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'], // Mediterranean Sea
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'], // North Africa
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+        ];
+
+        const WW2_PIXEL_MAP_WIDTH = WW2_PIXEL_MAP_DATA[0].length;
+        const WW2_PIXEL_MAP_HEIGHT = WW2_PIXEL_MAP_DATA.length;
+
+        // Simplified pixel map for Roman Empire timeline
+        const ROMAN_PIXEL_MAP_DATA = [
+            // Simplified Mediterranean and surrounding land
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass'],
+            ['grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass'],
+            ['grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass'],
+            ['grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass'],
+            ['grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water', 'water'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+            ['desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert', 'desert'],
+        ];
+
+        const ROMAN_PIXEL_MAP_WIDTH = ROMAN_PIXEL_MAP_DATA[0].length;
+        const ROMAN_PIXEL_MAP_HEIGHT = ROMAN_PIXEL_MAP_DATA.length;
+
+
+        const MAP_TEXTURE_URLS = {
+            // 'ww2' now points to a special value indicating a pixel-drawn map
+            ww2: 'pixel_map', 
+            // 'roman' now points to a special value indicating a pixel-drawn map
+            roman: 'pixel_map', 
+            fantasy: 'random', // Indicates a randomly generated map
+            custom: 'random', // Indicates a randomly generated or drawable map
+        };
+
         // Icone SVG per le unità. I colori di riempimento e tratto sono segnaposto, sostituiti dinamicamente.
         const SVG_ICONS = {
             ww2_infantry: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`,
             ww2_tank: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5h1.1a1 1 0 0 1 .9.5L5 12v4H2Z"/><path d="M22 9.5h-1.1a1 1 0 0 0-.9.5L19 12v4h3Z"/><path d="M5 16h14V9H5v7Z"/><path d="M5 9V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2"/><path d="M12 16v-4"/><path d="M9 12h6"/></svg>`,
+            ww2_plane: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13s2 1 4 1 4-1 4-1M2 13h20M22 13s-2 1-4 1-4-1-4-1M12 2v20M12 12h-2l-2 4h8l-2-4h-2"/></svg>`, // Simple plane
+            ww2_artillery: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-2 4h4l-2-4zM12 12v10M5 16h14M3 12h18"/></svg>`, // Simple artillery
+            ww2_ship: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17h20L17 8H7L2 17zM12 8v-6M8 8l-2-6M16 8l2-6"/></svg>`, // Simple ship
+
             roman_legion: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
             roman_cavalry: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9 9h6l-3-7z"/><path d="M3 12h18"/><path d="M5 21l7-9 7 9"/></svg>`,
+            roman_archer: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9 9h6l-3-7zM10 12H2M18 12h-8M12 2v20M22 12l-3-3m0 6l3-3"/></svg>`, // Roman Archer (bow and legion helmet)
+            roman_catapult: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17h20L17 8H7L2 17zM12 8v-6M8 8l-2-6M16 8l2-6M12 12v10M5 16h14"/></svg>`, // Roman Catapult (simplified)
+            roman_centurion: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zM12 12v10M5 16h14M3 12h18"/></svg>`, // Roman Centurion (helmet and cape)
+
             fantasy_knight: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-5 10h10l-5-10zM12 9v12M5 16h14M3 12h18"/></svg>`, // Simple knight
             fantasy_archer: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12H2M18 12h-8M12 2v20M22 12l-3-3m0 6l3-3"/></svg>`, // Simple bow
             fantasy_mage: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-5 10h10l-5-10zM5 12h14M12 12v10M16 16l-4 4-4-4"/></svg>`, // Simple staff/magic
-        };
-
-        const MAP_DATA = {
-            ww2: WORLD_MAP_PLACEHOLDER, // Usa la mappa del mondo per la Seconda Guerra Mondiale
-            roman: WORLD_MAP_PLACEHOLDER, // Usa la mappa del mondo per l'Impero Romano
-            fantasy: 'random', // Indica che la mappa sarà generata casualmente
-            custom: 'random', // Indica che la mappa sarà generata casualmente (o disegnata)
+            fantasy_griffin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-3 6h6l-3-6zM12 8v14M5 16h14M3 12h18"/></svg>`, // Simple griffin (wings)
+            fantasy_dragon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-5 10h10l-5-10zM5 12h14M12 12v10M16 16l-4 4-4-4M2 10l5-5M22 10l-5-5"/></svg>`, // Simple dragon (wings and tail)
         };
 
         const TIMELINES = {
             ww2: {
                 name: 'Seconda Guerra Mondiale',
-                mapId: 'ww2',
+                mapId: 'ww2', // This will now refer to the pixel map
                 units: {
                     ww2_infantry: { name: 'Fanteria WW2', health: 100, attack: 20, movementRange: 3, attackRange: 1, maxMP: 3, maxAP: 1 },
                     ww2_tank: { name: 'Carro Armato WW2', health: 200, attack: 50, movementRange: 2, attackRange: 1, maxMP: 2, maxAP: 1 },
+                    ww2_plane: { name: 'Aereo WW2', health: 80, attack: 60, movementRange: 5, attackRange: 2, maxMP: 5, maxAP: 1 },
+                    ww2_artillery: { name: 'Artiglieria WW2', health: 120, attack: 40, movementRange: 1, attackRange: 3, maxMP: 1, maxAP: 1 },
+                    ww2_ship: { name: 'Nave WW2', health: 300, attack: 70, movementRange: 2, attackRange: 2, maxMP: 2, maxAP: 1 },
                 },
-                initialUnits: [ // Unità da distribuire equamente (totale 10)
-                    { type: 'ww2_tank', count: 4 }, // 2 per giocatore
-                    { type: 'ww2_infantry', count: 6 }, // 3 per giocatore
-                ]
+                scenario: [] // Le unità vanno piazzate manualmente
             },
             roman: {
                 name: 'Impero Romano',
-                mapId: 'roman',
+                mapId: 'roman', // This will now refer to the pixel map
                 units: {
                     roman_legion: { name: 'Legione Romana', health: 120, attack: 25, movementRange: 4, attackRange: 1, maxMP: 4, maxAP: 1 },
                     roman_cavalry: { name: 'Cavalleria Romana', health: 80, attack: 30, movementRange: 6, attackRange: 1, maxMP: 6, maxAP: 1 },
+                    roman_archer: { name: 'Arciere Romano', health: 70, attack: 20, movementRange: 3, attackRange: 2, maxMP: 3, maxAP: 1 },
+                    roman_catapult: { name: 'Catapulta Romana', health: 100, attack: 50, movementRange: 1, attackRange: 4, maxMP: 1, maxAP: 1 },
+                    roman_centurion: { name: 'Centurione', health: 150, attack: 35, movementRange: 3, attackRange: 1, maxMP: 3, maxAP: 1 },
                 },
-                initialUnits: [ // Totale 10
-                    { type: 'roman_legion', count: 6 }, // 3 per giocatore
-                    { type: 'roman_cavalry', count: 4 }, // 2 per giocatore
-                ]
+                scenario: [] // Le unità vanno piazzate manualmente
             },
             fantasy: {
                 name: 'Regno Fantasy',
@@ -264,28 +434,77 @@
                     fantasy_knight: { name: 'Cavaliere', health: 150, attack: 30, movementRange: 3, attackRange: 1, maxMP: 3, maxAP: 1 },
                     fantasy_archer: { name: 'Arciere', health: 80, attack: 25, movementRange: 2, attackRange: 3, maxMP: 2, maxAP: 1 },
                     fantasy_mage: { name: 'Mago', health: 70, attack: 40, movementRange: 2, attackRange: 2, maxMP: 2, maxAP: 1 },
+                    fantasy_griffin: { name: 'Grifone', health: 180, attack: 45, movementRange: 6, attackRange: 1, maxMP: 6, maxAP: 1 },
+                    fantasy_dragon: { name: 'Drago', health: 250, attack: 80, movementRange: 4, attackRange: 2, maxMP: 4, maxAP: 1 },
                 },
-                initialUnits: [ // Totale 10
-                    { type: 'fantasy_knight', count: 4 }, // 2 per giocatore
-                    { type: 'fantasy_archer', count: 4 }, // 2 per giocatore
-                    { type: 'fantasy_mage', count: 2 }, // 1 per giocatore
-                ]
+                scenario: [] // Le unità vanno piazzate manualmente
             },
             custom: {
                 name: 'Sandbox Globale',
                 mapId: 'custom', // Mappa casuale o disegnabile
-                units: {
+                units: { // Tutte le unità disponibili per la modalità sandbox
                     ww2_infantry: { name: 'Fanteria WW2', health: 100, attack: 20, movementRange: 3, attackRange: 1, maxMP: 3, maxAP: 1 },
                     ww2_tank: { name: 'Carro Armato WW2', health: 200, attack: 50, movementRange: 2, attackRange: 1, maxMP: 2, maxAP: 1 },
+                    ww2_plane: { name: 'Aereo WW2', health: 80, attack: 60, movementRange: 5, attackRange: 2, maxMP: 5, maxAP: 1 },
+                    ww2_artillery: { name: 'Artiglieria WW2', health: 120, attack: 40, movementRange: 1, attackRange: 3, maxMP: 1, maxAP: 1 },
+                    ww2_ship: { name: 'Nave WW2', health: 300, attack: 70, movementRange: 2, attackRange: 2, maxMP: 2, maxAP: 1 },
+
                     roman_legion: { name: 'Legione Romana', health: 120, attack: 25, movementRange: 4, attackRange: 1, maxMP: 4, maxAP: 1 },
                     roman_cavalry: { name: 'Cavalleria Romana', health: 80, attack: 30, movementRange: 6, attackRange: 1, maxMP: 6, maxAP: 1 },
+                    roman_archer: { name: 'Arciere Romano', health: 70, attack: 20, movementRange: 3, attackRange: 2, maxMP: 3, maxAP: 1 },
+                    roman_catapult: { name: 'Catapulta Romana', health: 100, attack: 50, movementRange: 1, attackRange: 4, maxMP: 1, maxAP: 1 },
+                    roman_centurion: { name: 'Centurione', health: 150, attack: 35, movementRange: 3, attackRange: 1, maxMP: 3, maxAP: 1 },
+
                     fantasy_knight: { name: 'Cavaliere', health: 150, attack: 30, movementRange: 3, attackRange: 1, maxMP: 3, maxAP: 1 },
                     fantasy_archer: { name: 'Arciere', health: 80, attack: 25, movementRange: 2, attackRange: 3, maxMP: 2, maxAP: 1 },
                     fantasy_mage: { name: 'Mago', health: 70, attack: 40, movementRange: 2, attackRange: 2, maxMP: 2, maxAP: 1 },
+                    fantasy_griffin: { name: 'Grifone', health: 180, attack: 45, movementRange: 6, attackRange: 1, maxMP: 6, maxAP: 1 },
+                    fantasy_dragon: { name: 'Drago', health: 250, attack: 80, movementRange: 4, attackRange: 2, maxMP: 4, maxAP: 1 },
                 },
-                initialUnits: [] // Inizia vuoto per la creazione personalizzata, le unità vanno piazzate manualmente
+                scenario: [] // Le unità vanno piazzate manualmente
             }
         };
+
+        // URLs for terrain textures (Public Domain / CC0 from Wikimedia Commons)
+        const TERRAIN_TEXTURE_URLS = {
+            grass: 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Grass_texture.jpg',
+            water: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Water_texture.jpg',
+            mountain: 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Rock_texture.jpg',
+            forest: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Forest_texture.jpg',
+            desert: 'https://upload.wikimedia.org/wikipedia/commons/2/22/Sand_texture.jpg'
+        };
+
+        // --- Variabili e elementi del Minigioco ---
+        const minigameModal = document.getElementById('minigame-modal');
+        const minigameBarContainer = document.getElementById('minigame-bar-container');
+        const minigameIndicator = document.getElementById('minigame-indicator');
+        const minigameTargetZone = document.getElementById('minigame-target-zone');
+        const minigamePerfectZone = document.getElementById('minigame-perfect-zone');
+        const minigameStopBtn = document.getElementById('minigame-stop-btn');
+
+        let targetZonePixelWidth, perfectZonePixelWidth;
+        let targetZoneStart, targetZoneEnd;
+        let perfectZoneStart, perfectZoneEnd;
+
+        function setupMinigameUI() {
+            // Calcola i valori in pixel basati sulla larghezza visiva definita
+            targetZonePixelWidth = app.minigameBarVisualWidth * app.minigameTargetZonePercent;
+            perfectZonePixelWidth = app.minigameBarVisualWidth * app.minigamePerfectZonePercent;
+
+            targetZoneStart = (app.minigameBarVisualWidth - targetZonePixelWidth) / 2;
+            targetZoneEnd = targetZoneStart + targetZonePixelWidth;
+
+            perfectZoneStart = (app.minigameBarVisualWidth - perfectZonePixelWidth) / 2;
+            perfectZoneEnd = perfectZoneStart + perfectZonePixelWidth;
+
+            // Applica stili CSS dinamicamente
+            minigameBarContainer.style.width = `${app.minigameBarVisualWidth}px`;
+            minigameTargetZone.style.width = `${targetZonePixelWidth}px`;
+            minigameTargetZone.style.left = `${targetZoneStart}px`;
+            minigamePerfectZone.style.width = `${perfectZonePixelWidth}px`;
+            minigamePerfectZone.style.left = `${perfectZoneStart}px`;
+            minigameIndicator.style.width = `${app.minigameIndicatorWidth}px`;
+        }
 
         // --- INIZIALIZZAZIONE E LOOP PRINCIPALE ---
         async function initializeApp() {
@@ -295,7 +514,8 @@
             setupEventListeners();
             await preloadAllIcons();
             await preloadTerrainTiles(); // Precarica le immagini delle tessere del terreno
-            
+            setupMinigameUI(); // Inizializza la UI del minigioco
+
             resizeCanvas();
             loadTimeline(app.currentTimeline);
             app.lastFrameTime = performance.now(); // Inizializza lastFrameTime
@@ -362,64 +582,102 @@
             ctx.scale(app.scale, app.scale);
 
             // 1. Disegna la mappa di sfondo o il terreno personalizzato
-            if (MAP_DATA[app.currentTimeline] === 'random') {
+            const mapType = MAP_TEXTURE_URLS[app.currentTimeline];
+            if (mapType === 'pixel_map') {
+                if (app.currentTimeline === 'ww2') {
+                    drawPixelMapWW2(); // Disegna la mappa pixel per WW2
+                } else if (app.currentTimeline === 'roman') {
+                    drawPixelMapRoman(); // Disegna la mappa pixel per Roman
+                }
+            } else if (mapType === 'random') {
                 drawCustomTerrain(); // Disegna le tessere del terreno generate casualmente
-            } else if (app.mapImage.complete) {
-                // Disegna l'immagine della mappa per riempire la vista scalata
-                ctx.drawImage(app.mapImage, 0, 0, canvas.width / app.scale, canvas.height / app.scale);
+            } else if (app.mapImage.complete && app.mapImage.naturalWidth > 0) {
+                // Draw the preloaded map image
+                ctx.drawImage(app.mapImage, 0, 0, app.gridWidth * app.cellSize, app.gridHeight * app.cellSize);
+            } else {
+                // Fallback: draw a solid color if map image is not loaded or for custom maps without terrain
+                ctx.fillStyle = '#333';
+                ctx.fillRect(0, 0, app.gridWidth * app.cellSize, app.gridHeight * app.cellSize);
             }
 
-            // 2. Disegna la griglia (opzionale, per debug o visualizzazione)
+            // 2. Disegna la griglia
             drawGrid();
 
-            // 3. Disegna le celle evidenziate (movimento/attacco)
+            // 3. Disegna le celle evidenziate (movimento e attacco)
             drawHighlightedCells();
 
             // 4. Disegna le unità
-            app.markers.forEach(marker => {
-                const icon = app.iconCache[`${marker.unitType}_${marker.faction}`];
-                if (!icon) return;
+            drawUnits();
 
-                const isCorrectTurn = (app.isPlayerTurn && marker.faction === 'player') || (!app.isPlayerTurn && marker.faction === 'enemy');
-                ctx.globalAlpha = isCorrectTurn ? 1.0 : 0.6; // Oscura le unità non attive in questo turno
-
-                // Disegna l'icona dell'unità
-                // Le unità sono centrate nella loro cella di griglia
-                const pixelX = marker.x - app.unitSize / 2;
-                const pixelY = marker.y - app.unitSize / 2;
-                ctx.drawImage(icon, pixelX, pixelY, app.unitSize, app.unitSize);
-                
-                // Disegna il cerchio di selezione se l'unità è selezionata
-                if (app.selectedUnit && app.selectedUnit.id === marker.id) {
-                    ctx.beginPath();
-                    ctx.arc(marker.x, marker.y, app.unitSize / 2 + 4, 0, Math.PI * 2);
-                    ctx.strokeStyle = '#facc15'; // Giallo
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-                }
-
-                // Disegna la barra della salute
-                drawHealthBar(ctx, marker);
-
-                ctx.globalAlpha = 1.0; // Ripristina l'alpha
-            });
-
-            ctx.restore(); // Ripristina lo stato originale della tela (annulla traslazione/scala)
+            // Ripristina le trasformazioni per disegnare elementi UI non scalati/panned
+            ctx.restore();
         }
 
+        /**
+         * Disegna la mappa pixel predefinita per la timeline WW2.
+         */
+        function drawPixelMapWW2() {
+            const { ctx, cellSize, terrainColors } = app;
+            for (let y = 0; y < WW2_PIXEL_MAP_HEIGHT; y++) {
+                for (let x = 0; x < WW2_PIXEL_MAP_WIDTH; x++) {
+                    const terrainType = WW2_PIXEL_MAP_DATA[y][x];
+                    ctx.fillStyle = terrainColors[terrainType] || '#888'; // Fallback color
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        /**
+         * Disegna la mappa pixel predefinita per la timeline Roman.
+         */
+        function drawPixelMapRoman() {
+            const { ctx, cellSize, terrainColors } = app;
+            for (let y = 0; y < ROMAN_PIXEL_MAP_HEIGHT; y++) {
+                for (let x = 0; x < ROMAN_PIXEL_MAP_WIDTH; x++) {
+                    const terrainType = ROMAN_PIXEL_MAP_DATA[y][x];
+                    ctx.fillStyle = terrainColors[terrainType] || '#888'; // Fallback color
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        /**
+         * Disegna le tessere del terreno basate su `app.terrainGrid`.
+         * Utilizza immagini precaricate se disponibili, altrimenti colori di fallback.
+         */
+        function drawCustomTerrain() {
+            const { ctx, cellSize, terrainGrid, terrainTileImages, terrainColors } = app;
+            for (let y = 0; y < terrainGrid.length; y++) {
+                for (let x = 0; x < terrainGrid[y].length; x++) {
+                    const terrainType = terrainGrid[y][x];
+                    const img = terrainTileImages[terrainType];
+                    if (img && img.complete && img.naturalWidth > 0) {
+                        ctx.drawImage(img, x * cellSize, y * cellSize, cellSize, cellSize);
+                    } else {
+                        // Fallback to color if image not loaded
+                        ctx.fillStyle = terrainColors[terrainType] || '#888';
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Disegna la griglia sul canvas.
+         */
         function drawGrid() {
             const { ctx, cellSize, gridWidth, gridHeight } = app;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Colore della griglia semi-trasparente
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Colore della griglia
             ctx.lineWidth = 1;
 
-            for (let x = 0; x < gridWidth; x++) {
+            for (let x = 0; x <= gridWidth; x++) {
                 ctx.beginPath();
                 ctx.moveTo(x * cellSize, 0);
                 ctx.lineTo(x * cellSize, gridHeight * cellSize);
                 ctx.stroke();
             }
 
-            for (let y = 0; y < gridHeight; y++) {
+            for (let y = 0; y <= gridHeight; y++) {
                 ctx.beginPath();
                 ctx.moveTo(0, y * cellSize);
                 ctx.lineTo(gridWidth * cellSize, y * cellSize);
@@ -427,848 +685,1261 @@
             }
         }
 
+        /**
+         * Disegna le celle evidenziate per movimento e attacco.
+         */
         function drawHighlightedCells() {
             const { ctx, cellSize, highlightedMoveCells, highlightedAttackCells } = app;
 
-            // Celle di movimento (verdi)
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'; // Verde semi-trasparente
+            // Celle di movimento
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'; // Verde semitrasparente
             highlightedMoveCells.forEach(cell => {
                 ctx.fillRect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);
             });
 
-            // Celle di attacco (rosse)
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'; // Rosso semi-trasparente
+            // Celle di attacco
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'; // Rosso semitrasparente
             highlightedAttackCells.forEach(cell => {
                 ctx.fillRect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);
             });
         }
 
-        function drawHealthBar(ctx, marker) {
-            const barWidth = app.unitSize * 0.8;
-            const barHeight = 5;
-            const barX = marker.x - barWidth / 2;
-            const barY = marker.y + app.unitSize / 2 + 5; // Sotto l'unità
+        /**
+         * Disegna tutte le unità (markers) sul canvas.
+         */
+        function drawUnits() {
+            const { ctx, unitSize, cellSize, iconCache } = app;
+            app.markers.forEach(marker => {
+                ctx.save();
+                // Centra l'unità nella sua cella
+                const drawX = marker.x - unitSize / 2;
+                const drawY = marker.y - unitSize / 2;
 
-            // Sfondo della barra della salute
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX, barY, barWidth, barHeight);
+                // Disegna l'icona SVG
+                const icon = iconCache[marker.type + '_' + marker.team]; // Use team-specific icon
+                if (icon) {
+                    ctx.drawImage(icon, drawX, drawY, unitSize, unitSize);
+                } else {
+                    // Fallback: draw a colored circle if icon not loaded
+                    ctx.beginPath();
+                    ctx.arc(marker.x, marker.y, unitSize / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = marker.team === 'player' ? 'blue' : 'red';
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
 
-            // Salute attuale
-            const healthPercentage = marker.health / marker.maxHealth;
-            const currentHealthWidth = barWidth * healthPercentage;
-            ctx.fillStyle = healthPercentage > 0.5 ? '#22c55e' : (healthPercentage > 0.2 ? '#eab308' : '#ef4444'); // Verde, Giallo, Rosso
-            ctx.fillRect(barX, barY, currentHealthWidth, barHeight);
+                // Disegna la barra della vita
+                const healthBarWidth = unitSize * 0.8;
+                const healthBarHeight = 5;
+                const healthBarX = marker.x - healthBarWidth / 2;
+                const healthBarY = marker.y + unitSize / 2 - healthBarHeight - 2;
 
-            // Bordo
-            ctx.strokeStyle = '#ccc';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+
+                const currentHealthWidth = (marker.health / marker.maxHealth) * healthBarWidth;
+                ctx.fillStyle = marker.health > marker.maxHealth * 0.5 ? 'green' : (marker.health > marker.maxHealth * 0.2 ? 'orange' : 'red');
+                ctx.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
+
+                // Disegna il bordo se l'unità è selezionata
+                if (app.selectedUnit && app.selectedUnit.id === marker.id) {
+                    ctx.strokeStyle = 'yellow';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(drawX, drawY, unitSize, unitSize);
+                }
+                ctx.restore();
+            });
         }
 
-        function drawCustomTerrain() {
-            const { ctx, cellSize, gridWidth, gridHeight, terrainGrid } = app;
+        /**
+         * Precarica tutte le icone SVG convertendole in immagini per il canvas.
+         */
+        async function preloadAllIcons() {
+            const promises = Object.keys(SVG_ICONS).map(async (key) => {
+                const img = new Image();
+                // Replace fill and stroke colors dynamically for player/enemy distinction
+                const playerSvg = SVG_ICONS[key].replace(/currentColor/g, 'blue').replace(/fill="none"/g, 'fill="blue"');
+                const enemySvg = SVG_ICONS[key].replace(/currentColor/g, 'red').replace(/fill="none"/g, 'fill="red"');
 
-            for (let y = 0; y < gridHeight; y++) {
-                for (let x = 0; x < gridWidth; x++) {
-                    const terrainType = terrainGrid[y][x];
-                    const img = app.terrainTileImages[terrainType];
-                    if (img && img.complete) {
-                        ctx.drawImage(img, x * cellSize, y * cellSize, cellSize, cellSize);
-                    } else {
-                        // Fallback a colore solido se l'immagine non è caricata
-                        ctx.fillStyle = app.terrainColors[terrainType] || '#000';
-                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-                    }
+                const createSvgImage = (svgString) => {
+                    return new Promise((resolve) => {
+                        const tempImg = new Image();
+                        tempImg.onload = () => resolve(tempImg);
+                        tempImg.onerror = () => {
+                            console.error(`Failed to load SVG for ${key}`);
+                            resolve(null); // Resolve with null on error
+                        };
+                        tempImg.src = 'data:image/svg+xml;base64,' + btoa(svgString);
+                    });
+                };
+
+                app.iconCache[`${key}_player`] = await createSvgImage(playerSvg);
+                app.iconCache[`${key}_enemy`] = await createSvgImage(enemySvg);
+            });
+            await Promise.all(promises);
+            addGameMessage("Icone unità precaricate.");
+        }
+
+        /**
+         * Precarica le immagini delle tessere del terreno.
+         */
+        async function preloadTerrainTiles() {
+            const promises = Object.keys(TERRAIN_TEXTURE_URLS).map(async (key) => {
+                const url = TERRAIN_TEXTURE_URLS[key];
+                // Skip 'random' or 'pixel_map' as they are not direct image URLs
+                if (url === 'random' || url === 'pixel_map') return; 
+
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        app.terrainTileImages[key] = img;
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        console.warn(`Failed to load terrain texture for ${key} from ${url}. Using fallback color.`);
+                        app.terrainTileImages[key] = null; // Mark as failed
+                        resolve();
+                    };
+                    img.src = url;
+                });
+            });
+            await Promise.all(promises);
+            addGameMessage("Tessere terreno precaricate.");
+        }
+
+        /**
+         * Ridimensiona il canvas per adattarsi alla finestra e ricalcola le dimensioni della griglia.
+         */
+        function resizeCanvas() {
+            const mapWrapper = document.getElementById('map-wrapper');
+            app.canvas.width = mapWrapper.clientWidth;
+            app.canvas.height = mapWrapper.clientHeight;
+
+            // Calcola la dimensione della griglia in base alla dimensione del canvas e della cella
+            app.gridWidth = Math.floor(app.canvas.width / app.cellSize);
+            app.gridHeight = Math.floor(app.canvas.height / app.cellSize);
+
+            // For pixel maps, use their fixed dimensions
+            if (MAP_TEXTURE_URLS[app.currentTimeline] === 'pixel_map') {
+                if (app.currentTimeline === 'ww2') {
+                    app.gridWidth = WW2_PIXEL_MAP_WIDTH;
+                    app.gridHeight = WW2_PIXEL_MAP_HEIGHT;
+                } else if (app.currentTimeline === 'roman') {
+                    app.gridWidth = ROMAN_PIXEL_MAP_WIDTH;
+                    app.gridHeight = ROMAN_PIXEL_MAP_HEIGHT;
+                }
+            } else if (MAP_TEXTURE_URLS[app.currentTimeline] !== 'random' && app.mapImage.complete && app.mapImage.naturalWidth > 0) {
+                // For other static maps, adjust grid dimensions to match the loaded map image
+                app.gridWidth = Math.ceil(app.mapImage.naturalWidth / app.cellSize);
+                app.gridHeight = Math.ceil(app.mapImage.naturalHeight / app.cellSize);
+            } else if (MAP_TEXTURE_URLS[app.currentTimeline] === 'random') {
+                // If it's a random map, ensure the terrain grid matches canvas dimensions
+                if (app.terrainGrid.length === 0 || app.terrainGrid[0].length !== app.gridWidth || app.terrainGrid.length !== app.gridHeight) {
+                     generateRandomTerrain(app.gridWidth, app.gridHeight);
                 }
             }
+            render(); // Ridisegna dopo il ridimensionamento
         }
+
+        /**
+         * Carica una nuova linea temporale, aggiornando unità e mappa.
+         * @param {string} timelineId - L'ID della linea temporale da caricare.
+         */
+        async function loadTimeline(timelineId) {
+            app.currentTimeline = timelineId;
+            app.markers = []; // Rimuovi tutte le unità esistenti
+            app.selectedUnit = null;
+            app.selectedUnitType = null;
+            app.playerDeaths = 0;
+            app.enemyDeaths = 0;
+            updateDeathCounts();
+            addGameMessage(`Linea temporale cambiata a: ${TIMELINES[timelineId].name}`);
+
+            const unitListDiv = document.getElementById('unit-list');
+            unitListDiv.innerHTML = ''; // Pulisci la palette delle unità
+
+            const currentTimelineData = TIMELINES[timelineId];
+            for (const unitKey in currentTimelineData.units) {
+                const unitInfo = currentTimelineData.units[unitKey];
+                const unitElement = document.createElement('div');
+                unitElement.className = 'unit-item p-2 rounded-md bg-gray-700 hover:bg-gray-600 cursor-pointer transition duration-200';
+                unitElement.dataset.unitType = unitKey;
+                unitElement.innerHTML = `
+                    <div class="flex justify-center items-center mb-1">
+                        <div class="unit-icon-svg text-blue-400">${SVG_ICONS[unitKey]}</div>
+                    </div>
+                    <span class="text-xs font-semibold">${unitInfo.name}</span>
+                `;
+                unitListDiv.appendChild(unitElement);
+            }
+
+            // Gestione della visibilità degli strumenti di creazione mappa
+            const mapCreationTools = document.getElementById('map-creation-tools');
+            const terrainPalette = document.getElementById('terrain-palette');
+            if (MAP_TEXTURE_URLS[timelineId] === 'random' || MAP_TEXTURE_URLS[timelineId] === 'pixel_map') {
+                mapCreationTools.classList.remove('hidden');
+                if (app.drawingMode) {
+                    terrainPalette.classList.remove('hidden');
+                }
+                // If it's a random map or pixel map, set grid dimensions and terrain data
+                if (MAP_TEXTURE_URLS[timelineId] === 'random') {
+                    app.gridWidth = Math.floor(app.canvas.width / app.cellSize);
+                    app.gridHeight = Math.floor(app.canvas.height / app.cellSize);
+                    generateRandomTerrain(app.gridWidth, app.gridHeight);
+                } else if (MAP_TEXTURE_URLS[timelineId] === 'pixel_map') {
+                    if (timelineId === 'ww2') {
+                        app.gridWidth = WW2_PIXEL_MAP_WIDTH;
+                        app.gridHeight = WW2_PIXEL_MAP_HEIGHT;
+                        app.terrainGrid = WW2_PIXEL_MAP_DATA; // Set the terrain grid to the pixel map data
+                        addGameMessage(`Mappa "${TIMELINES[timelineId].name}" caricata (pixel map).`);
+                    } else if (timelineId === 'roman') {
+                        app.gridWidth = ROMAN_PIXEL_MAP_WIDTH;
+                        app.gridHeight = ROMAN_PIXEL_MAP_HEIGHT;
+                        app.terrainGrid = ROMAN_PIXEL_MAP_DATA; // Set the terrain grid to the pixel map data
+                        addGameMessage(`Mappa "${TIMELINES[timelineId].name}" caricata (pixel map).`);
+                    }
+                }
+            } else {
+                mapCreationTools.classList.add('hidden');
+                terrainPalette.classList.add('hidden');
+                app.drawingMode = false; // Disattiva la modalità disegno
+                document.getElementById('drawing-mode-toggle').checked = false;
+
+                // Load the map image if it's a static map
+                const mapUrl = MAP_TEXTURE_URLS[timelineId];
+                app.mapImage = new Image();
+                app.mapImage.onload = () => {
+                    // Adjust grid dimensions to match the loaded map image
+                    app.gridWidth = Math.ceil(app.mapImage.naturalWidth / app.cellSize);
+                    app.gridHeight = Math.ceil(app.mapImage.naturalHeight / app.cellSize);
+                    // Reset offset and scale for new map
+                    app.offsetX = 0;
+                    app.offsetY = 0;
+                    app.scale = 1;
+                    resizeCanvas(); // Recalculate canvas size and redraw
+                    addGameMessage(`Mappa "${TIMELINES[timelineId].name}" caricata.`);
+                };
+                app.mapImage.onerror = () => {
+                    console.error(`Failed to load map image for ${timelineId} from ${mapUrl}.`);
+                    addGameMessage(`Errore caricamento mappa per ${TIMELINES[timelineId].name}.`);
+                    // Fallback to a plain background
+                    app.mapImage = new Image(); // Reset to an empty image
+                    app.gridWidth = Math.floor(app.canvas.width / app.cellSize); // Reset grid to canvas size
+                    app.gridHeight = Math.floor(app.canvas.height / app.cellSize); // Reset grid to canvas size
+                    resizeCanvas();
+                };
+                app.mapImage.src = mapUrl;
+            }
+            resizeCanvas(); // Ensure canvas is resized and rendered after timeline load
+        }
+
+        /**
+         * Genera una griglia di terreno casuale.
+         * @param {number} width - Larghezza della griglia in celle.
+         * @param {number} height - Altezza della griglia in celle.
+         */
+        function generateRandomTerrain(width, height) {
+            app.terrainGrid = Array(height).fill(null).map(() => Array(width).fill(null));
+            const terrainTypes = ['grass', 'water', 'mountain', 'forest', 'desert'];
+
+            // Simple random generation
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    app.terrainGrid[y][x] = terrainTypes[Math.floor(Math.random() * terrainTypes.length)];
+                }
+            }
+            addGameMessage("Mappa casuale generata.");
+            render();
+        }
+
+        /**
+         * Aggiunge un set "equo" di unità per una squadra.
+         * Le unità vengono posizionate in una riga o colonna, evitando sovrapposizioni.
+         * @param {string} team - 'player' o 'enemy'.
+         */
+        function addFairUnits(team) {
+            const currentUnits = TIMELINES[app.currentTimeline].units;
+            const unitTypes = Object.keys(currentUnits);
+            let startX, startY;
+            const padding = 2; // Cells padding from edge
+
+            // Determine starting position based on team
+            if (team === 'player') {
+                startX = padding;
+                startY = padding;
+            } else { // enemy
+                startX = Math.max(padding, app.gridWidth - padding - unitTypes.length); // Ensure startX is not negative
+                startY = Math.max(padding, app.gridHeight - padding - 1); // Ensure startY is not negative, place in last row
+            }
+
+            let currentX = startX;
+            let currentY = startY;
+
+            unitTypes.forEach(unitTypeKey => {
+                const unitInfo = currentUnits[unitTypeKey];
+                let placed = false;
+                // Try to find an empty spot
+                for (let i = 0; i < app.gridWidth * app.gridHeight; i++) { // Iterate through all possible cells
+                    let tempX = (startX + i) % app.gridWidth;
+                    let tempY = startY + Math.floor((startX + i) / app.gridWidth);
+
+                    if (team === 'enemy') {
+                        // For enemy, try to place from bottom-right, moving left then up
+                        tempX = app.gridWidth - 1 - ((startX + i) % app.gridWidth);
+                        tempY = app.gridHeight - 1 - Math.floor((startX + i) / app.gridWidth);
+                    }
+
+
+                    if (tempX >= 0 && tempX < app.gridWidth && tempY >= 0 && tempY < app.gridHeight) {
+                        if (!getUnitAtGrid(tempX, tempY)) {
+                            const newUnit = {
+                                id: app.nextUnitId++,
+                                type: unitTypeKey,
+                                name: unitInfo.name,
+                                health: unitInfo.health,
+                                maxHealth: unitInfo.health,
+                                attack: unitInfo.attack,
+                                movementRange: unitInfo.movementRange,
+                                attackRange: unitInfo.attackRange,
+                                mp: unitInfo.maxMP, // Movement Points
+                                maxMP: unitInfo.maxMP,
+                                ap: unitInfo.maxAP, // Action Points
+                                maxAP: unitInfo.maxAP,
+                                team: team,
+                                gridX: tempX,
+                                gridY: tempY,
+                                x: tempX * app.cellSize + app.cellSize / 2, // Pixel center X
+                                y: tempY * app.cellSize + app.cellSize / 2, // Pixel center Y
+                                path: [], // Current movement path for animation
+                                moving: false, // Is the unit currently animating movement
+                            };
+                            app.markers.push(newUnit);
+                            addGameMessage(`Aggiunta unità ${newUnit.name} (${team}) a (${newUnit.gridX}, ${newUnit.gridY}).`);
+                            placed = true;
+                            break; // Unit placed, move to next unit type
+                        }
+                    }
+                }
+                if (!placed) {
+                    addGameMessage(`Impossibile trovare una posizione per l'unità ${unitInfo.name} della squadra ${team}.`);
+                }
+            });
+            render();
+        }
+
 
         // --- GESTIONE EVENTI ---
         function setupEventListeners() {
-            document.getElementById('timeline-select').addEventListener('change', (e) => loadTimeline(e.target.value));
-            document.getElementById('end-turn-btn').addEventListener('click', toggleTurn);
-            document.getElementById('reset-map-btn').addEventListener('click', resetCurrentTimeline);
-            
-            // Eventi mouse per desktop
-            app.canvas.addEventListener('click', handleMapClick);
-            app.canvas.addEventListener('contextmenu', handleMapRightClick);
-            app.canvas.addEventListener('mousedown', handleMouseDown);
-            app.canvas.addEventListener('mousemove', handleMouseMove);
-            app.canvas.addEventListener('mouseup', handleMouseUp);
-            app.canvas.addEventListener('mouseout', handleMouseUp); // Ferma il trascinamento se il mouse esce dalla tela
-            app.canvas.addEventListener('wheel', handleMouseWheel);
-
-            // Eventi touch per mobile
-            app.canvas.addEventListener('touchstart', handleTouchStart);
-            app.canvas.addEventListener('touchmove', handleTouchMove);
-            app.canvas.addEventListener('touchend', handleTouchEnd);
-            app.canvas.addEventListener('touchcancel', handleTouchEnd); // Gestisce quando il tocco è interrotto
-
-            window.addEventListener('resize', resizeCanvas);
-
-            // Strumenti di Creazione Mappa (solo per Sandbox Globale e Regno Fantasy)
-            document.getElementById('generate-random-map-btn').addEventListener('click', () => {
-                generateRandomTerrainMap();
-                addGameMessage('Mappa casuale generata per la modalità Sandbox/Fantasy.');
+            // Selettore della linea temporale
+            document.getElementById('timeline-select').addEventListener('change', (e) => {
+                loadTimeline(e.target.value);
             });
-            // La modalità disegno manuale non è più attiva di default per le mappe casuali
-            // ma il toggle e la palette sono mantenuti per un potenziale futuro uso di disegno manuale
+
+            // Pulsanti "Aggiungi Unità Giocatore/Nemico"
+            document.getElementById('add-player-fair-units-btn').addEventListener('click', () => addFairUnits('player'));
+            document.getElementById('add-enemy-fair-units-btn').addEventListener('click', () => addFairUnits('enemy'));
+
+
+            // Toggle modalità di gioco (PvP/PvB)
+            document.querySelectorAll('input[name="game-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    app.gameMode = e.target.value;
+                    const botDifficultySection = document.getElementById('bot-difficulty-section');
+                    if (app.gameMode === 'player-vs-bot') {
+                        botDifficultySection.classList.remove('hidden');
+                    } else {
+                        botDifficultySection.classList.add('hidden');
+                    }
+                    addGameMessage(`Modalità di gioco cambiata a: ${app.gameMode === 'player-vs-player' ? 'Giocatore vs Giocatore' : 'Giocatore vs Bot'}`);
+                });
+            });
+
+            // Selettore difficoltà bot
+            document.getElementById('bot-difficulty-select').addEventListener('change', (e) => {
+                app.botDifficulty = e.target.value;
+                addGameMessage(`Difficoltà bot impostata su: ${app.botDifficulty}`);
+            });
+
+            // Pulsante "Termina Turno"
+            document.getElementById('end-turn-btn').addEventListener('click', endTurn);
+
+            // Pulsante "Reset Mappa"
+            document.getElementById('reset-map-btn').addEventListener('click', resetMap);
+
+            // Clic sulla palette delle unità
+            document.getElementById('unit-list').addEventListener('click', (e) => {
+                const unitItem = e.target.closest('.unit-item');
+                if (unitItem) {
+                    app.selectedUnitType = unitItem.dataset.unitType;
+                    addGameMessage(`Tipo di unità selezionato: ${TIMELINES[app.currentTimeline].units[app.selectedUnitType].name}`);
+                    app.selectedUnit = null; // Deseleziona qualsiasi unità sulla mappa
+                    app.highlightedMoveCells = [];
+                    app.highlightedAttackCells = [];
+                    render();
+                }
+            });
+
+            // Toggle modalità disegno manuale
             document.getElementById('drawing-mode-toggle').addEventListener('change', (e) => {
                 app.drawingMode = e.target.checked;
                 const terrainPalette = document.getElementById('terrain-palette');
                 if (app.drawingMode) {
                     terrainPalette.classList.remove('hidden');
-                    addGameMessage('Modalità Disegno Manuale Abilitata (solo per Sandbox).');
+                    addGameMessage("Modalità disegno manuale attivata. Seleziona un terreno.");
                 } else {
                     terrainPalette.classList.add('hidden');
-                    addGameMessage('Modalità Disegno Manuale Disabilitata.');
+                    addGameMessage("Modalità disegno manuale disattivata.");
                 }
             });
-            document.querySelectorAll('.terrain-button').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    app.selectedTerrain = e.target.dataset.terrain;
-                    document.querySelectorAll('.terrain-button').forEach(btn => btn.classList.remove('ring-2', 'ring-yellow-400'));
-                    e.target.classList.add('ring-2', 'ring-yellow-400');
-                    addGameMessage(`Terreno selezionato: ${e.target.innerText}`);
-                });
+
+            // Selezione terreno nella palette
+            document.getElementById('terrain-palette').addEventListener('click', (e) => {
+                const terrainButton = e.target.closest('.terrain-button');
+                if (terrainButton) {
+                    app.selectedTerrain = terrainButton.dataset.terrain;
+                    addGameMessage(`Terreno selezionato per il disegno: ${app.selectedTerrain}`);
+                }
             });
-            // Selezione iniziale per il pulsante del terreno
-            document.querySelector('.terrain-button[data-terrain="grass"]').classList.add('ring-2', 'ring-yellow-400');
+
+            // Eventi mouse per panning e zoom
+            app.canvas.addEventListener('mousedown', handleMouseDown);
+            app.canvas.addEventListener('mouseup', handleMouseUp);
+            app.canvas.addEventListener('mousemove', handleMouseMove);
+            app.canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
+            app.canvas.addEventListener('contextmenu', handleContextMenu); // Per il tasto destro
+
+            // Eventi touch per panning, zoom e long press
+            app.canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            app.canvas.addEventListener('touchend', handleTouchEnd);
+            app.canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+            // Evento click sul canvas (dopo gli eventi mouse/touch per evitare doppi trigger)
+            app.canvas.addEventListener('click', handleClick);
+
+            // Evento click per il minigioco "STOP!"
+            minigameStopBtn.addEventListener('click', stopMinigame);
+
+            // Gestione del ridimensionamento della finestra
+            window.addEventListener('resize', resizeCanvas);
         }
 
-        function resizeCanvas() {
-            const wrapper = document.getElementById('map-wrapper');
-            const oldCanvasWidth = app.canvas.width;
-            const oldCanvasHeight = app.canvas.height;
-            
-            app.canvas.width = wrapper.offsetWidth;
-            app.canvas.height = wrapper.offsetHeight;
-            
-            // Ricalcola le dimensioni della griglia
-            app.gridWidth = Math.floor(app.canvas.width / app.cellSize);
-            app.gridHeight = Math.floor(app.canvas.height / app.cellSize);
-
-            // Regola gli offset per mantenere il centro relativamente stabile durante il ridimensionamento della finestra
-            if (oldCanvasWidth > 0 && oldCanvasHeight > 0) {
-                app.offsetX += (app.canvas.width - oldCanvasWidth) / 2;
-                app.offsetY += (app.canvas.height - oldCanvasHeight) / 2;
-            }
-
-            // Se la mappa è generata casualmente, rigenerala per adattarsi alle nuove dimensioni
-            if (MAP_DATA[app.currentTimeline] === 'random') {
-                generateRandomTerrainMap();
-            }
-        }
-
-        function getMousePos(event) {
+        /**
+         * Gestisce il click sul canvas.
+         * @param {MouseEvent} e - L'evento mouse.
+         */
+        function handleClick(e) {
+            // Converti le coordinate del mouse in coordinate del canvas scalate
             const rect = app.canvas.getBoundingClientRect();
-            // Regola la posizione del mouse in base al panning e allo zoom attuali
-            const x = (event.clientX - rect.left - app.offsetX) / app.scale;
-            const y = (event.clientY - rect.top - app.offsetY) / app.scale;
+            const mouseX = (e.clientX - rect.left - app.offsetX) / app.scale;
+            const mouseY = (e.clientY - rect.top - app.offsetY) / app.scale;
 
-            // Calcola le coordinate della griglia
-            const gridX = Math.floor(x / app.cellSize);
-            const gridY = Math.floor(y / app.cellSize);
+            // Converti le coordinate del canvas in coordinate della griglia
+            const gridX = Math.floor(mouseX / app.cellSize);
+            const gridY = Math.floor(mouseY / app.cellSize);
 
-            return { x, y, gridX, gridY };
+            // Se la modalità di disegno è attiva, disegna il terreno
+            if (app.drawingMode && MAP_TEXTURE_URLS[app.currentTimeline] === 'random') {
+                if (gridX >= 0 && gridX < app.gridWidth && gridY >= 0 && gridY < app.gridHeight) {
+                    app.terrainGrid[gridY][gridX] = app.selectedTerrain;
+                    render();
+                }
+                return; // Non processare come click unità in modalità disegno
+            }
+
+            const clickedUnit = getUnitAtGrid(gridX, gridY);
+
+            if (app.selectedUnitType) {
+                // Se un tipo di unità è selezionato dalla palette, prova a posizionarlo
+                if (!clickedUnit) { // Se la cella è vuota
+                    placeUnit(gridX, gridY, app.selectedUnitType, 'player'); // Posiziona sempre come giocatore
+                } else {
+                    addGameMessage("Cella già occupata da un'unità. Deseleziona il tipo di unità per interagire con le unità esistenti.");
+                }
+                app.selectedUnitType = null; // Deseleziona il tipo di unità dopo il posizionamento
+            } else if (clickedUnit) {
+                // Se un'unità è stata cliccata
+                if (app.selectedUnit && app.selectedUnit.id === clickedUnit.id) {
+                    // Cliccato sulla stessa unità selezionata, deseleziona
+                    app.selectedUnit = null;
+                    app.highlightedMoveCells = [];
+                    app.highlightedAttackCells = [];
+                    addGameMessage("Unità deselezionata.");
+                } else if (clickedUnit.team === 'player' && app.isPlayerTurn) {
+                    // Seleziona un'unità del giocatore durante il suo turno
+                    app.selectedUnit = clickedUnit;
+                    app.highlightedMoveCells = getReachableCells(clickedUnit);
+                    app.highlightedAttackCells = getAttackableCells(clickedUnit);
+                    addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). MP: ${clickedUnit.mp}, AP: ${clickedUnit.ap}`);
+                } else if (app.selectedUnit && app.selectedUnit.team === 'player' && clickedUnit.team === 'enemy' && app.highlightedAttackCells.some(c => c.x === gridX && c.y === gridY)) {
+                    // Attacca un'unità nemica se una unità del giocatore è selezionata e l'attacco è possibile
+                    if (app.selectedUnit.ap > 0) {
+                        startMinigame(app.selectedUnit, clickedUnit);
+                    } else {
+                        addGameMessage("Questa unità ha esaurito i Punti Azione (AP).");
+                    }
+                } else {
+                    addGameMessage("Non puoi selezionare questa unità o non è il tuo turno.");
+                }
+            } else if (app.selectedUnit) {
+                // Se un'unità è selezionata e si clicca su una cella vuota
+                if (app.highlightedMoveCells.some(c => c.x === gridX && c.y === gridY)) {
+                    // Muovi l'unità selezionata se la cella è raggiungibile
+                    if (app.selectedUnit.mp > 0) {
+                        moveUnit(app.selectedUnit, gridX, gridY);
+                    } else {
+                        addGameMessage("Questa unità ha esaurito i Punti Movimento (MP).");
+                    }
+                } else {
+                    addGameMessage("Cella non valida per il movimento o l'attacco.");
+                }
+            }
+            render();
         }
 
-        function handleMouseDown(event) {
-            if (event.button === 0) { // Click sinistro per trascinare/disegnare
-                if (app.currentTimeline === 'custom' && app.drawingMode) {
-                    app.isDrawing = true;
-                    drawTerrainAt(getMousePos(event));
-                } else {
-                    app.isDragging = true;
-                    app.lastMouseX = event.clientX;
-                    app.lastMouseY = event.clientY;
-                    app.canvas.classList.add('grabbing');
-                }
+        /**
+         * Gestisce il tasto destro del mouse per rimuovere unità.
+         * @param {MouseEvent} e - L'evento mouse.
+         */
+        function handleContextMenu(e) {
+            e.preventDefault(); // Impedisci il menu contestuale predefinito
+            const rect = app.canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left - app.offsetX) / app.scale;
+            const mouseY = (e.clientY - rect.top - app.offsetY) / app.scale;
+
+            const gridX = Math.floor(mouseX / app.cellSize);
+            const gridY = Math.floor(mouseY / app.cellSize);
+
+            const clickedUnit = getUnitAtGrid(gridX, gridY);
+            if (clickedUnit) {
+                removeUnit(clickedUnit);
+                render();
             }
         }
 
-        function handleMouseMove(event) {
+        // --- GESTIONE INTERAZIONI MOUSE/TOUCH PER PANNING E ZOOM ---
+        function getEventPoint(e) {
+            const rect = app.canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function handleMouseDown(e) {
+            if (e.button === 0) { // Left click
+                app.isDragging = true;
+                app.lastMouseX = e.clientX;
+                app.lastMouseY = e.clientY;
+                app.canvas.classList.add('grabbing');
+            }
+        }
+
+        function handleMouseMove(e) {
             if (app.isDragging) {
-                const dx = event.clientX - app.lastMouseX;
-                const dy = event.clientY - app.lastMouseY;
+                const dx = e.clientX - app.lastMouseX;
+                const dy = e.clientY - app.lastMouseY;
                 app.offsetX += dx;
                 app.offsetY += dy;
-                app.lastMouseX = event.clientX;
-                app.lastMouseY = event.clientY;
-            } else if (app.isDrawing && app.currentTimeline === 'custom' && app.drawingMode) {
-                drawTerrainAt(getMousePos(event));
+                app.lastMouseX = e.clientX;
+                app.lastMouseY = e.clientY;
+                render();
+            } else if (app.drawingMode && app.isDrawing) {
+                // Handle continuous drawing
+                const rect = app.canvas.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left - app.offsetX) / app.scale;
+                const mouseY = (e.clientY - rect.top - app.offsetY) / app.scale;
+                const gridX = Math.floor(mouseX / app.cellSize);
+                const gridY = Math.floor(mouseY / app.cellSize);
+
+                if (gridX >= 0 && gridX < app.gridWidth && gridY >= 0 && gridY < app.gridHeight) {
+                    if (app.terrainGrid[gridY][gridX] !== app.selectedTerrain) {
+                        app.terrainGrid[gridY][gridX] = app.selectedTerrain;
+                        render();
+                    }
+                }
             }
         }
 
-        function handleMouseUp(event) {
+        function handleMouseUp() {
             app.isDragging = false;
             app.isDrawing = false;
             app.canvas.classList.remove('grabbing');
         }
 
-        function handleMouseWheel(event) {
-            event.preventDefault(); // Impedisci lo scorrimento della pagina
+        function handleMouseWheel(e) {
+            e.preventDefault(); // Impedisci lo scroll della pagina
             const scaleAmount = 1.1;
-            const mousePos = getMousePos(event); // Posizione del mouse relativa alla tela non scalata
+            const mouseX = (e.clientX - app.canvas.getBoundingClientRect().left);
+            const mouseY = (e.clientY - app.canvas.getBoundingClientRect().top);
 
-            const oldScale = app.scale;
-            if (event.deltaY < 0) { // Zoom in
+            const worldX = (mouseX - app.offsetX) / app.scale;
+            const worldY = (mouseY - app.offsetY) / app.scale;
+
+            if (e.deltaY < 0) { // Zoom in
                 app.scale *= scaleAmount;
             } else { // Zoom out
                 app.scale /= scaleAmount;
             }
 
             // Limita lo zoom
-            app.scale = Math.max(0.5, Math.min(app.scale, 3.0));
+            app.scale = Math.max(0.5, Math.min(app.scale, 3));
 
-            // Regola l'offset per zoomare verso il cursore del mouse
-            app.offsetX = mousePos.x * (oldScale - app.scale) + app.offsetX;
-            app.offsetY = mousePos.y * (oldScale - app.scale) + app.offsetY;
+            // Aggiorna l'offset per mantenere il punto sotto il cursore
+            app.offsetX = mouseX - worldX * app.scale;
+            app.offsetY = mouseY - worldY * app.scale;
+
+            render();
         }
 
-        // --- Gestione Touch ---
-        function handleTouchStart(event) {
-            event.preventDefault(); // Impedisci il comportamento predefinito del browser (scorrimento, zoom)
-            if (event.touches.length === 1) {
+        function handleTouchStart(e) {
+            if (e.touches.length === 1) {
+                app.touchStartTime = Date.now();
+                app.touchStartX = e.touches[0].clientX;
+                app.touchStartY = e.touches[0].clientY;
                 app.isDragging = true;
-                app.lastMouseX = event.touches[0].clientX;
-                app.lastMouseY = event.touches[0].clientY;
+                app.lastMouseX = e.touches[0].clientX;
+                app.lastMouseY = e.touches[0].clientY;
                 app.canvas.classList.add('grabbing');
 
-                app.touchStartTime = performance.now();
-                app.touchStartX = event.touches[0].clientX;
-                app.touchStartY = event.touches[0].clientY;
+                if (app.drawingMode && MAP_TEXTURE_URLS[app.currentTimeline] === 'random') {
+                    app.isDrawing = true;
+                    // Initial draw for touch
+                    const rect = app.canvas.getBoundingClientRect();
+                    const touchX = (e.touches[0].clientX - rect.left - app.offsetX) / app.scale;
+                    const touchY = (e.touches[0].clientY - rect.top - app.offsetY) / app.scale;
+                    const gridX = Math.floor(touchX / app.cellSize);
+                    const gridY = Math.floor(touchY / app.cellSize);
+                    if (gridX >= 0 && gridX < app.gridWidth && gridY >= 0 && gridY < app.gridHeight) {
+                        app.terrainGrid[gridY][gridX] = app.selectedTerrain;
+                        render();
+                    }
+                }
+
+            } else if (e.touches.length === 2) {
+                // Inizia il pinch-to-zoom
+                app.isDragging = false; // Disabilita il panning quando si zooma
+                app.initialPinchDistance = getPinchDistance(e);
+                app.initialPinchScale = app.scale;
+                const point1 = getEventPoint(e.touches[0]);
+                const point2 = getEventPoint(e.touches[1]);
+                app.pinchCenterX = (point1.x + point2.x) / 2;
+                app.pinchCenterY = (point1.y + point2.y) / 2;
             }
-            // Per il pinch-to-zoom (più complesso, non implementato completamente qui)
-            // if (event.touches.length === 2) { /* gestisci l'inizio del pinch */ }
         }
 
-        function handleTouchMove(event) {
-            if (event.touches.length === 1 && app.isDragging) {
-                const dx = event.touches[0].clientX - app.lastMouseX;
-                const dy = event.touches[0].clientY - app.lastMouseY;
+        function handleTouchMove(e) {
+            e.preventDefault(); // Impedisci lo scroll e il pinch-to-zoom predefiniti del browser
+
+            if (e.touches.length === 1 && app.isDragging) {
+                const dx = e.touches[0].clientX - app.lastMouseX;
+                const dy = e.touches[0].clientY - app.lastMouseY;
                 app.offsetX += dx;
                 app.offsetY += dy;
-                app.lastMouseX = event.touches[0].clientX;
-                app.lastMouseY = event.touches[0].clientY;
-            }
-            // Per il pinch-to-zoom
-            // if (event.touches.length === 2) { /* gestisci il movimento del pinch */ }
-        }
+                app.lastMouseX = e.touches[0].clientX;
+                app.lastMouseY = e.touches[0].clientY;
+                render();
 
-        function handleTouchEnd(event) {
-            app.isDragging = false;
-            app.canvas.classList.remove('grabbing');
-
-            // Controlla il tap (equivalente al click)
-            if (event.changedTouches.length === 1) {
-                const touchDuration = performance.now() - app.touchStartTime;
-                const touchEndX = event.changedTouches[0].clientX;
-                const touchEndY = event.changedTouches[0].clientY;
-                const moveDistance = Math.sqrt(
-                    Math.pow(touchEndX - app.touchStartX, 2) +
-                    Math.pow(touchEndY - app.touchStartY, 2)
-                );
-
-                if (touchDuration < app.LONG_PRESS_THRESHOLD && moveDistance < app.TAP_MOVE_THRESHOLD) {
-                    // È un tap, simula il click
-                    const simulatedEvent = new MouseEvent('click', {
-                        clientX: touchEndX,
-                        clientY: touchEndY,
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    });
-                    app.canvas.dispatchEvent(simulatedEvent);
-                } else if (touchDuration >= app.LONG_PRESS_THRESHOLD && moveDistance < app.TAP_MOVE_THRESHOLD) {
-                    // È una pressione prolungata, simula il click destro
-                    const simulatedEvent = new MouseEvent('contextmenu', {
-                        clientX: touchEndX,
-                        clientY: touchEndY,
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    });
-                    app.canvas.dispatchEvent(simulatedEvent);
-                }
-            }
-        }
-
-
-        function handleMapClick(event) {
-            const pos = getMousePos(event);
-            const clickedGridX = pos.gridX;
-            const clickedGridY = pos.gridY;
-
-            // Se in modalità disegno manuale (solo per custom e se abilitata), disegna il terreno
-            if (app.currentTimeline === 'custom' && app.drawingMode) {
-                drawTerrainAt(pos);
-                return; // Non fare nient'altro se si sta disegnando
-            }
-
-            const clickedUnit = getUnitAtGridPos(clickedGridX, clickedGridY);
-
-            if (app.selectedUnit) {
-                // Un'unità è già selezionata, ora l'utente vuole muoverla o attaccare
-                if (app.highlightedAttackCells.some(c => c.x === clickedGridX && c.y === clickedGridY)) {
-                    // Cliccato su una cella di attacco evidenziata
-                    if (clickedUnit && clickedUnit.faction !== app.selectedUnit.faction) {
-                        handleCombat(app.selectedUnit, clickedUnit);
-                    } else {
-                        addGameMessage("Non puoi attaccare una cella vuota o un'unità amica.");
-                    }
-                } else if (app.highlightedMoveCells.some(c => c.x === clickedGridX && c.y === clickedGridY)) {
-                    // Cliccato su una cella di movimento evidenziata
-                    if (!clickedUnit) { // Solo se la cella di destinazione è vuota
-                        startMoveUnit(app.selectedUnit, clickedGridX, clickedGridY);
-                    } else {
-                        addGameMessage("La cella di destinazione è occupata.");
-                    }
-                } else if (app.selectedUnit.gridX === clickedGridX && app.selectedUnit.gridY === clickedGridY) {
-                    // Cliccato sull'unità selezionata, deseleziona
-                    deselectAll();
-                } else {
-                    addGameMessage('Destinazione non valida per l\'unità selezionata.');
-                    deselectAll();
-                }
-            } else if (clickedUnit) {
-                // Nessuna unità selezionata, cliccato su un'unità -> seleziona
-                handleUnitSelection(clickedUnit);
-            } else if (app.selectedUnitType) {
-                // Nessuna unità selezionata, nessun'unità cliccata, ma un tipo di unità è selezionato dalla palette -> piazza unità
-                const unitInfo = TIMELINES[app.currentTimeline].units[app.selectedUnitType];
-                const faction = app.isPlayerTurn ? 'player' : 'enemy'; // Le unità piazzate dal giocatore attuale
-                placeUnit(app.selectedUnitType, faction, clickedGridX, clickedGridY, unitInfo.health, unitInfo.attack, unitInfo.movementRange, unitInfo.attackRange, unitInfo.maxMP, unitInfo.maxAP);
-            } else {
-                // Cliccato su spazio vuoto senza unità selezionata o tipo selezionato
-                deselectAll();
-            }
-        }
-
-        function handleMapRightClick(event) {
-            event.preventDefault(); // Impedisci il menu contestuale
-            const pos = getMousePos(event);
-            const clickedUnit = getUnitAtGridPos(pos.gridX, pos.gridY);
-            if (clickedUnit) {
-                removeUnit(clickedUnit);
-                addGameMessage(`Unità ${clickedUnit.id} rimossa.`);
-            }
-            deselectAll(); // Deseleziona qualsiasi unità/tipo selezionato
-        }
-
-        // --- GESTIONE UNITÀ ---
-        function placeUnit(unitType, faction, gridX, gridY, health, attack, movementRange, attackRange, maxMP, maxAP) {
-            // Controlla se la cella è già occupata
-            if (getUnitAtGridPos(gridX, gridY)) {
-                addGameMessage("Non puoi posizionare un'unità su una cella già occupata.");
-                return;
-            }
-
-            const id = app.nextUnitId++;
-            const pixelX = gridX * app.cellSize + app.cellSize / 2;
-            const pixelY = gridY * app.cellSize + app.cellSize / 2;
-
-            app.markers.push({ 
-                id, unitType, faction, 
-                gridX, gridY, x: pixelX, y: pixelY, // Coordinate pixel iniziali centrate nella cella
-                health: health, 
-                maxHealth: health, 
-                attack: attack, 
-                movementRange: movementRange, // in celle
-                attackRange: attackRange, // in celle
-                maxMP: maxMP,
-                currentMP: maxMP,
-                maxAP: maxAP,
-                currentAP: maxAP,
-                hasMoved: false,
-                hasAttacked: false,
-                path: [], // Percorso per il movimento animato
-                moving: false, // Flag per l'animazione di movimento
-            });
-            addGameMessage(`Unità ${unitType} (${faction}) posizionata a (${gridX}, ${gridY}).`);
-            deselectAll();
-        }
-
-        function startMoveUnit(unit, targetGridX, targetGridY) {
-            if (unit.hasMoved) {
-                addGameMessage('Questa unità si è già mossa in questo turno.');
-                deselectAll();
-                return;
-            }
-            if (unit.currentMP <= 0) {
-                addGameMessage('Questa unità non ha Punti Movimento sufficienti.');
-                deselectAll();
-                return;
-            }
-
-            // Semplice percorso diretto (potrebbe essere migliorato con A*)
-            const path = [{ x: targetGridX, y: targetGridY }];
-            unit.path = path;
-            unit.moving = true;
-            unit.hasMoved = true;
-            unit.currentMP--; // Decrementa MP per ogni movimento (potrebbe essere più complesso per costi per cella)
-            addGameMessage(`Unità ${unit.id} si muove verso (${targetGridX}, ${targetGridY}). MP rimanenti: ${unit.currentMP}.`);
-            deselectAll(); // Deseleziona dopo aver dato l'ordine di movimento
-        }
-
-        function handleCombat(attacker, defender) {
-            if (attacker.faction === defender.faction) {
-                addGameMessage("Non puoi attaccare un'unità amica.");
-                deselectAll();
-                return;
-            }
-            if (attacker.hasAttacked) {
-                addGameMessage('Questa unità si è già mossa o attaccata in questo turno.');
-                deselectAll();
-                return;
-            }
-            if (attacker.currentAP <= 0) {
-                addGameMessage('Questa unità non ha Punti Azione sufficienti per attaccare.');
-                deselectAll();
-                return;
-            }
-
-            const distance = Math.abs(attacker.gridX - defender.gridX) + Math.abs(attacker.gridY - defender.gridY);
-            if (distance > attacker.attackRange) {
-                addGameMessage(`Unità ${attacker.id} è troppo lontana per attaccare Unità ${defender.id}. (Raggio: ${attacker.attackRange})`);
-                deselectAll();
-                return;
-            }
-
-            addGameMessage(`Combattimento: Unità ${attacker.id} (${attacker.unitType}) attacca Unità ${defender.id} (${defender.unitType})!`);
-
-            // L'attaccante infligge danni al difensore
-            defender.health -= attacker.attack;
-            addGameMessage(`Unità ${defender.id} subisce ${attacker.attack} danni. Salute rimanente: ${defender.health}/${defender.maxHealth}.`);
-
-            attacker.hasAttacked = true;
-            attacker.currentAP--;
-
-            if (defender.health <= 0) {
-                addGameMessage(`Unità ${defender.id} (${defender.unitType}) distrutta!`);
-                if (defender.faction === 'player') {
-                    app.playerDeaths++;
-                    document.getElementById('player-deaths').innerText = app.playerDeaths;
-                } else {
-                    app.enemyDeaths++;
-                    document.getElementById('enemy-deaths').innerText = app.enemyDeaths;
-                }
-                removeUnit(defender);
-            }
-            deselectAll();
-        }
-
-        function removeUnit(markerToRemove) {
-            app.markers = app.markers.filter(m => m.id !== markerToRemove.id);
-            if (app.selectedUnit && app.selectedUnit.id === markerToRemove.id) {
-                deselectAll();
-            }
-        }
-
-        function handleUnitSelection(unit) {
-            const isCorrectTurn = (app.isPlayerTurn && unit.faction === 'player') || (!app.isPlayerTurn && unit.faction === 'enemy');
-            if (!isCorrectTurn) {
-                addGameMessage('Non puoi selezionare questa unità in questo turno.');
-                deselectAll();
-                return;
-            }
-
-            deselectAll();
-            app.selectedUnit = unit;
-            addGameMessage(`Unità ${unit.id} (${unit.unitType}) selezionata. MP: ${unit.currentMP}, AP: ${unit.currentAP}.`);
-            calculateHighlights(unit);
-        }
-
-        function getUnitAtGridPos(gridX, gridY) {
-            return app.markers.find(m => m.gridX === gridX && m.gridY === gridY);
-        }
-
-        function deselectAll() {
-            app.selectedUnit = null;
-            app.selectedUnitType = null;
-            app.highlightedMoveCells = [];
-            app.highlightedAttackCells = [];
-            // Rimuovi l'anello di selezione dai pulsanti della palette delle unità
-            document.querySelectorAll('.unit-button').forEach(btn => btn.classList.remove('ring-2', 'ring-yellow-400'));
-        }
-
-        function calculateHighlights(unit) {
-            app.highlightedMoveCells = [];
-            app.highlightedAttackCells = [];
-
-            if (!unit) return;
-
-            // Calcola le celle di movimento
-            if (!unit.hasMoved && unit.currentMP > 0) {
-                for (let dy = -unit.movementRange; dy <= unit.movementRange; dy++) {
-                    for (let dx = -unit.movementRange; dx <= unit.movementRange; dx++) {
-                        const newX = unit.gridX + dx;
-                        const newY = unit.gridY + dy;
-                        // Controlla i limiti della griglia e la distanza Manhattan per il movimento
-                        if (newX >= 0 && newX < app.gridWidth && newY >= 0 && newY < app.gridHeight &&
-                            (Math.abs(dx) + Math.abs(dy) <= unit.movementRange) &&
-                            !getUnitAtGridPos(newX, newY)) { // Non evidenziare celle occupate per il movimento
-                            app.highlightedMoveCells.push({ x: newX, y: newY });
+                if (app.drawingMode && app.isDrawing) {
+                    // Continuous drawing for touch
+                    const rect = app.canvas.getBoundingClientRect();
+                    const touchX = (e.touches[0].clientX - rect.left - app.offsetX) / app.scale;
+                    const touchY = (e.touches[0].clientY - rect.top - app.offsetY) / app.scale;
+                    const gridX = Math.floor(touchX / app.cellSize);
+                    const gridY = Math.floor(touchY / app.cellSize);
+                    if (gridX >= 0 && gridX < app.gridWidth && gridY >= 0 && gridY < app.gridHeight) {
+                        if (app.terrainGrid[gridY][gridX] !== app.selectedTerrain) {
+                            app.terrainGrid[gridY][gridX] = app.selectedTerrain;
+                            render();
                         }
                     }
                 }
+
+            } else if (e.touches.length === 2 && app.initialPinchDistance) {
+                const currentPinchDistance = getPinchDistance(e);
+                const scaleFactor = currentPinchDistance / app.initialPinchDistance;
+                let newScale = app.initialPinchScale * scaleFactor;
+
+                // Limita lo zoom
+                newScale = Math.max(0.5, Math.min(newScale, 3));
+
+                // Calcola il nuovo offset per mantenere il centro del pinch
+                const worldX = (app.pinchCenterX - app.offsetX) / app.scale;
+                const worldY = (app.pinchCenterY - app.offsetY) / app.scale;
+
+                app.scale = newScale;
+
+                app.offsetX = app.pinchCenterX - worldX * app.scale;
+                app.offsetY = app.pinchCenterY - worldY * app.scale;
+
+                render();
+            }
+        }
+
+        function handleTouchEnd(e) {
+            app.isDragging = false;
+            app.isDrawing = false;
+            app.canvas.classList.remove('grabbing');
+            app.initialPinchDistance = null; // Resetta per il pinch-to-zoom
+
+            // Se è stato un tap singolo (non un drag o pinch) e non in modalità disegno
+            if (e.touches.length === 0 && !app.drawingMode) {
+                const touchDuration = Date.now() - app.touchStartTime;
+                const deltaX = Math.abs(e.changedTouches[0].clientX - app.touchStartX);
+                const deltaY = Math.abs(e.changedTouches[0].clientY - app.touchStartY);
+
+                if (deltaX < app.TAP_MOVE_THRESHOLD && deltaY < app.TAP_MOVE_THRESHOLD) {
+                    // È un tap o un long press
+                    const rect = app.canvas.getBoundingClientRect();
+                    const touchX = (e.changedTouches[0].clientX - rect.left - app.offsetX) / app.scale;
+                    const touchY = (e.changedTouches[0].clientY - rect.top - app.offsetY) / app.scale;
+                    const gridX = Math.floor(touchX / app.cellSize);
+                    const gridY = Math.floor(touchY / app.cellSize);
+
+                    if (touchDuration > app.LONG_PRESS_THRESHOLD) {
+                        // Long press (simula tasto destro)
+                        const clickedUnit = getUnitAtGrid(gridX, gridY);
+                        if (clickedUnit) {
+                            removeUnit(clickedUnit);
+                            render();
+                        }
+                    } else {
+                        // Tap (simula click sinistro)
+                        // Re-trigger handleClick logic using the touch coordinates
+                        handleClick({
+                            clientX: e.changedTouches[0].clientX,
+                            clientY: e.changedTouches[0].clientY,
+                            button: 0 // Simulate left click
+                        });
+                    }
+                }
+            }
+        }
+
+        function getPinchDistance(e) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // --- LOGICA DI GIOCO ---
+
+        /**
+         * Posiziona una nuova unità sulla mappa.
+         * @param {number} gridX - Coordinata X della griglia.
+         * @param {number} gridY - Coordinata Y della griglia.
+         * @param {string} unitTypeKey - Chiave del tipo di unità (es. 'ww2_infantry').
+         * @param {string} team - 'player' o 'enemy'.
+         */
+        function placeUnit(gridX, gridY, unitTypeKey, team) {
+            if (gridX < 0 || gridX >= app.gridWidth || gridY < 0 || gridY >= app.gridHeight) {
+                addGameMessage("Impossibile posizionare l'unità fuori dai limiti della mappa.");
+                return;
+            }
+            if (getUnitAtGrid(gridX, gridY)) {
+                addGameMessage("Cella già occupata.");
+                return;
             }
 
-            // Calcola le celle di attacco
-            if (!unit.hasAttacked && unit.currentAP > 0) {
-                for (let dy = -unit.attackRange; dy <= unit.attackRange; dy++) {
-                    for (let dx = -unit.attackRange; dx <= unit.attackRange; dx++) {
-                        const newX = unit.gridX + dx;
-                        const newY = unit.gridY + dy;
-                        // Controlla i limiti della griglia e la distanza Manhattan per l'attacco
-                        if (newX >= 0 && newX < app.gridWidth && newY >= 0 && newY < app.gridHeight &&
-                            (Math.abs(dx) + Math.abs(dy) <= unit.attackRange)) {
-                            const targetUnit = getUnitAtGridPos(newX, newY);
-                            if (targetUnit && targetUnit.faction !== unit.faction) {
-                                app.highlightedAttackCells.push({ x: newX, y: newY });
+            const unitInfo = TIMELINES[app.currentTimeline].units[unitTypeKey];
+            if (!unitInfo) {
+                addGameMessage("Tipo di unità non valido.");
+                return;
+            }
+
+            const newUnit = {
+                id: app.nextUnitId++,
+                type: unitTypeKey,
+                name: unitInfo.name,
+                health: unitInfo.health,
+                maxHealth: unitInfo.health,
+                attack: unitInfo.attack,
+                movementRange: unitInfo.movementRange,
+                attackRange: unitInfo.attackRange,
+                mp: unitInfo.maxMP, // Movement Points
+                maxMP: unitInfo.maxMP,
+                ap: unitInfo.maxAP, // Action Points
+                maxAP: unitInfo.maxAP,
+                team: team,
+                gridX: gridX,
+                gridY: gridY,
+                x: gridX * app.cellSize + app.cellSize / 2, // Pixel center X
+                y: gridY * app.cellSize + app.cellSize / 2, // Pixel center Y
+                path: [], // Current movement path for animation
+                moving: false, // Is the unit currently animating movement
+            };
+            app.markers.push(newUnit);
+            addGameMessage(`Unità ${newUnit.name} (${team}) posizionata a (${gridX}, ${gridY}).`);
+            render();
+        }
+
+        /**
+         * Rimuove un'unità dalla mappa.
+         * @param {object} unitToRemove - L'oggetto unità da rimuovere.
+         */
+        function removeUnit(unitToRemove) {
+            app.markers = app.markers.filter(unit => unit.id !== unitToRemove.id);
+            if (app.selectedUnit && app.selectedUnit.id === unitToRemove.id) {
+                app.selectedUnit = null;
+                app.highlightedMoveCells = [];
+                app.highlightedAttackCells = [];
+            }
+            if (unitToRemove.team === 'player') {
+                app.playerDeaths++;
+            } else {
+                app.enemyDeaths++;
+            }
+            updateDeathCounts();
+            addGameMessage(`Unità ${unitToRemove.name} (ID: ${unitToRemove.id}) rimossa.`);
+            render();
+        }
+
+        /**
+         * Trova un'unità alle coordinate della griglia specificate.
+         * @param {number} gridX - Coordinata X della griglia.
+         * @param {number} gridY - Coordinata Y della griglia.
+         * @returns {object|null} L'unità trovata o null.
+         */
+        function getUnitAtGrid(gridX, gridY) {
+            return app.markers.find(marker => marker.gridX === gridX && marker.gridY === gridY);
+        }
+
+        /**
+         * Calcola le celle raggiungibili per il movimento di un'unità.
+         * Utilizza un algoritmo BFS (Breadth-First Search) per trovare tutte le celle entro il raggio di movimento.
+         * @param {object} unit - L'unità per cui calcolare il movimento.
+         * @returns {Array<object>} Un array di oggetti {x, y} delle celle raggiungibili.
+         */
+        function getReachableCells(unit) {
+            if (unit.mp <= 0) return [];
+
+            const queue = [{ x: unit.gridX, y: unit.gridY, dist: 0 }];
+            const visited = new Set();
+            visited.add(`${unit.gridX},${unit.gridY}`);
+
+            const reachableCells = [];
+
+            let head = 0;
+            while (head < queue.length) {
+                const { x, y, dist } = queue[head++];
+
+                if (dist > unit.movementRange) continue;
+
+                // Aggiungi la cella se non è la posizione iniziale e non è occupata da un'altra unità
+                if (dist > 0 && !getUnitAtGrid(x, y)) {
+                    reachableCells.push({ x, y });
+                }
+
+                // Esplora i vicini (su, giù, sinistra, destra)
+                const neighbors = [
+                    { nx: x, ny: y - 1 }, // Su
+                    { nx: x, ny: y + 1 }, // Giù
+                    { nx: x - 1, ny: y }, // Sinistra
+                    { nx: x + 1, ny: y }  // Destra
+                ];
+
+                for (const neighbor of neighbors) {
+                    const { nx, ny } = neighbor;
+                    if (nx >= 0 && nx < app.gridWidth && ny >= 0 && ny < app.gridHeight) {
+                        const cellKey = `${nx},${ny}`;
+                        if (!visited.has(cellKey)) {
+                            // Non aggiungere alla coda se la cella è occupata da un'unità (non si può passare attraverso)
+                            // o se è un terreno non attraversabile (es. acqua, montagna)
+                            const terrainType = app.terrainGrid[ny]?.[nx];
+                            if (!getUnitAtGrid(nx, ny) && !['water', 'mountain'].includes(terrainType)) {
+                                visited.add(cellKey);
+                                queue.push({ x: nx, y: ny, dist: dist + 1 });
                             }
                         }
                     }
                 }
             }
+            return reachableCells;
         }
 
-        // --- GESTIONE TURNI E LINEE TEMPORALI ---
-        function toggleTurn() {
+        /**
+         * Calcola le celle attaccabili da un'unità.
+         * @param {object} unit - L'unità per cui calcolare l'attacco.
+         * @returns {Array<object>} Un array di oggetti {x, y} delle celle attaccabili.
+         */
+        function getAttackableCells(unit) {
+            if (unit.ap <= 0) return [];
+
+            const attackableCells = [];
+            for (let y = 0; y < app.gridHeight; y++) {
+                for (let x = 0; x < app.gridWidth; x++) {
+                    const dx = Math.abs(unit.gridX - x);
+                    const dy = Math.abs(unit.gridY - y);
+                    const distance = dx + dy; // Distanza Manhattan
+
+                    if (distance >= 1 && distance <= unit.attackRange) {
+                        const targetUnit = getUnitAtGrid(x, y);
+                        if (targetUnit && targetUnit.team !== unit.team) {
+                            attackableCells.push({ x, y });
+                        }
+                    }
+                }
+            }
+            return attackableCells;
+        }
+
+        /**
+         * Muove un'unità alla nuova posizione sulla griglia.
+         * @param {object} unit - L'unità da muovere.
+         * @param {number} targetGridX - Coordinata X della griglia di destinazione.
+         * @param {number} targetGridY - Coordinata Y della griglia di destinazione.
+         */
+        function moveUnit(unit, targetGridX, targetGridY) {
+            if (unit.mp <= 0) {
+                addGameMessage(`${unit.name} ha esaurito i Punti Movimento.`);
+                return;
+            }
+
+            // Implementa un semplice pathfinding (es. A* o BFS) per un movimento più intelligente
+            // Per ora, solo un movimento diretto se la cella è raggiungibile.
+            const path = findPath(unit.gridX, unit.gridY, targetGridX, targetGridY);
+
+            if (path.length > 0) {
+                unit.path = path;
+                unit.moving = true;
+                unit.mp = 0; // Consuma tutti i MP per il movimento
+                app.selectedUnit = null; // Deseleziona dopo il movimento
+                app.highlightedMoveCells = [];
+                app.highlightedAttackCells = [];
+                addGameMessage(`${unit.name} si sta muovendo a (${targetGridX}, ${targetGridY}).`);
+            } else {
+                addGameMessage("Percorso non trovato o cella non raggiungibile.");
+            }
+        }
+
+        /**
+         * Trova un percorso tra due punti sulla griglia usando BFS.
+         * Restituisce un array di oggetti {x, y} che rappresentano il percorso.
+         * @param {number} startX
+         * @param {number} startY
+         * @param {number} endX
+         * @param {number} endY
+         * @returns {Array<object>} Il percorso, escludendo la cella iniziale.
+         */
+        function findPath(startX, startY, endX, endY) {
+            const queue = [{ x: startX, y: startY, path: [] }];
+            const visited = new Set();
+            visited.add(`${startX},${startY}`);
+
+            let head = 0;
+            while (head < queue.length) {
+                const { x, y, path } = queue[head++];
+
+                if (x === endX && y === endY) {
+                    return path; // Percorso trovato
+                }
+
+                const neighbors = [
+                    { nx: x, ny: y - 1 },
+                    { nx: x, ny: y + 1 },
+                    { nx: x - 1, ny: y },
+                    { nx: x + 1, ny: y }
+                ];
+
+                for (const neighbor of neighbors) {
+                    const { nx, ny } = neighbor;
+                    if (nx >= 0 && nx < app.gridWidth && ny >= 0 && ny < app.gridHeight) {
+                        const cellKey = `${nx},${ny}`;
+                        if (!visited.has(cellKey)) {
+                            const unitAtCell = getUnitAtGrid(nx, ny);
+                            const terrainType = app.terrainGrid[ny]?.[nx];
+                            // Non attraversare unità o terreni non attraversabili
+                            if (!unitAtCell && !['water', 'mountain'].includes(terrainType)) {
+                                visited.add(cellKey);
+                                queue.push({ x: nx, y: ny, path: [...path, { x: nx, y: ny }] });
+                            }
+                        }
+                    }
+                }
+            }
+            return []; // Nessun percorso trovato
+        }
+
+        /**
+         * Inizia il minigioco di attacco.
+         * @param {object} attackingUnit - L'unità che attacca.
+         * @param {object} defendingUnit - L'unità che difende.
+         */
+        function startMinigame(attackingUnit, defendingUnit) {
+            minigameModal.classList.remove('hidden');
+            app.minigameStartTime = performance.now();
+            minigameIndicator.style.left = '0px'; // Reset indicator position
+
+            // Return a promise that resolves with the minigame result
+            return new Promise(resolve => {
+                app.minigameResolve = resolve;
+                app.minigameAnimationId = requestAnimationFrame((timestamp) => animateMinigame(timestamp, attackingUnit, defendingUnit));
+            });
+        }
+
+        /**
+         * Anima l'indicatore del minigioco.
+         * @param {DOMHighResTimeStamp} currentTime - Il tempo corrente.
+         * @param {object} attackingUnit - L'unità che attacca.
+         * @param {object} defendingUnit - L'unità che difende.
+         */
+        function animateMinigame(currentTime, attackingUnit, defendingUnit) {
+            const elapsedTime = currentTime - app.minigameStartTime;
+            const barWidth = app.minigameBarVisualWidth;
+            const indicatorPosition = (elapsedTime / 1000 * app.minigameSpeed) % (barWidth * 2); // Move back and forth
+
+            let currentX;
+            if (indicatorPosition <= barWidth) {
+                currentX = indicatorPosition;
+            } else {
+                currentX = barWidth - (indicatorPosition - barWidth);
+            }
+
+            minigameIndicator.style.left = `${currentX}px`;
+
+            app.minigameAnimationId = requestAnimationFrame((timestamp) => animateMinigame(timestamp, attackingUnit, defendingUnit));
+        }
+
+        /**
+         * Ferma il minigioco e calcola il risultato dell'attacco.
+         */
+        function stopMinigame() {
+            cancelAnimationFrame(app.minigameAnimationId);
+            minigameModal.classList.add('hidden');
+
+            const indicatorX = parseFloat(minigameIndicator.style.left);
+            let damageMultiplier = 0.5; // Danno base
+
+            if (indicatorX >= perfectZoneStart && indicatorX <= perfectZoneEnd) {
+                damageMultiplier = 1.5; // Danno perfetto
+                addGameMessage("COLPO PERFETTO! Danno aumentato!");
+            } else if (indicatorX >= targetZoneStart && indicatorX <= targetZoneEnd) {
+                damageMultiplier = 1.0; // Danno buono
+                addGameMessage("COLPO BUONO! Danno normale.");
+            } else {
+                damageMultiplier = 0.5; // Danno scarso
+                addGameMessage("COLPO MANCATO! Danno ridotto.");
+            }
+
+            // Recupera l'unità attaccante e difendente (devono essere memorizzate o passate)
+            // Per semplicità, useremo app.selectedUnit e l'unità target che è stata attaccata l'ultima volta
+            // In un gioco reale, queste sarebbero passate come parametri o recuperate da uno stato più robusto.
+            const attackingUnit = app.selectedUnit; // Assumiamo che l'unità selezionata sia quella che attacca
+            const targetCell = app.highlightedAttackCells.find(cell => getUnitAtGrid(cell.x, cell.y) && getUnitAtGrid(cell.x, cell.y).team !== attackingUnit.team);
+            const defendingUnit = targetCell ? getUnitAtGrid(targetCell.x, targetCell.y) : null;
+
+            if (attackingUnit && defendingUnit) {
+                const damage = attackingUnit.attack * damageMultiplier;
+                defendingUnit.health -= damage;
+                addGameMessage(`${attackingUnit.name} ha attaccato ${defendingUnit.name} infliggendo ${damage.toFixed(0)} danni.`);
+
+                attackingUnit.ap--; // Consuma un Punto Azione
+
+                if (defendingUnit.health <= 0) {
+                    addGameMessage(`${defendingUnit.name} è stato sconfitto!`);
+                    removeUnit(defendingUnit);
+                }
+            } else {
+                addGameMessage("Errore: unità attaccante o difendente non trovata per il minigioco.");
+            }
+
+            app.selectedUnit = null; // Deseleziona l'unità dopo l'attacco
+            app.highlightedMoveCells = [];
+            app.highlightedAttackCells = [];
+            render();
+            app.minigameResolve(damageMultiplier); // Risolvi la promise con il risultato
+        }
+
+        /**
+         * Termina il turno corrente e passa al turno successivo.
+         */
+        function endTurn() {
             app.isPlayerTurn = !app.isPlayerTurn;
-            deselectAll();
-            updateTurnIndicators();
-            addGameMessage(`È il turno del ${app.isPlayerTurn ? 'Giocatore' : 'Nemico'}.`);
+            app.selectedUnit = null; // Deseleziona qualsiasi unità
+            app.highlightedMoveCells = [];
+            app.highlightedAttackCells = [];
 
-            // Reset MP/AP per le unità della fazione che inizia il turno
-            app.markers.forEach(marker => {
-                if (marker.faction === (app.isPlayerTurn ? 'player' : 'enemy')) {
-                    marker.currentMP = marker.maxMP;
-                    marker.currentAP = marker.maxAP;
-                    marker.hasMoved = false;
-                    marker.hasAttacked = false;
-                }
+            // Reset MP e AP per tutte le unità all'inizio di ogni turno
+            app.markers.forEach(unit => {
+                unit.mp = unit.maxMP;
+                unit.ap = unit.maxAP;
             });
-        }
-        
-        function loadTimeline(timelineId) {
-            app.currentTimeline = timelineId;
-            const timeline = TIMELINES[timelineId];
-            
-            clearMap();
-            resetDeaths();
-            deselectAll();
-            app.isPlayerTurn = true;
-            updateTurnIndicators();
-            
-            // Mostra/nascondi gli strumenti di creazione mappa in base alla timeline
-            const mapCreationTools = document.getElementById('map-creation-tools');
-            const generateRandomMapBtn = document.getElementById('generate-random-map-btn');
-            const drawingModeToggle = document.getElementById('drawing-mode-toggle');
-            const terrainPalette = document.getElementById('terrain-palette');
 
-            if (MAP_DATA[timelineId] === 'random') {
-                mapCreationTools.classList.remove('hidden');
-                generateRandomMapBtn.classList.remove('hidden');
-                drawingModeToggle.checked = false; // Disabilita la modalità disegno manuale
-                app.drawingMode = false;
-                terrainPalette.classList.add('hidden'); // Nascondi la palette del terreno per il disegno manuale
-                generateRandomTerrainMap(); // Genera una nuova mappa casuale
-                addGameMessage(`Timeline "${timeline.name}" caricata con mappa casuale.`);
-            } else {
-                mapCreationTools.classList.add('hidden');
-                generateRandomMapBtn.classList.add('hidden');
-                drawingModeToggle.checked = false;
-                app.drawingMode = false;
-                terrainPalette.classList.add('hidden');
-                // Per le mappe predefinite, ripristina la griglia del terreno a un tipo predefinito (non visibile)
-                app.terrainGrid = Array(app.gridHeight).fill(0).map(() => Array(app.gridWidth).fill('grass'));
-                addGameMessage(`Timeline "${timeline.name}" caricata.`);
+            updateTurnIndicator();
+            addGameMessage(`Turno terminato. Ora è il turno ${app.isPlayerTurn ? 'del Giocatore' : 'del Nemico'}.`);
+
+            if (!app.isPlayerTurn && app.gameMode === 'player-vs-bot') {
+                setTimeout(botTurn, 1000); // Ritarda il turno del bot per visibilità
+            }
+            render();
+        }
+
+        /**
+         * Esegue la logica del turno del bot.
+         */
+        function botTurn() {
+            addGameMessage("Il bot sta elaborando il suo turno...");
+            const enemyUnits = app.markers.filter(unit => unit.team === 'enemy');
+            const playerUnits = app.markers.filter(unit => unit.team === 'player');
+
+            if (playerUnits.length === 0) {
+                addGameMessage("Tutte le unità del giocatore sono state sconfitte! Il bot ha vinto!");
+                return;
+            }
+            if (enemyUnits.length === 0) {
+                addGameMessage("Tutte le unità del bot sono state sconfitte! Il giocatore ha vinto!");
+                return;
             }
 
-            // Carica l'immagine della mappa per le timeline non casuali
-            if (MAP_DATA[timelineId] !== 'random') {
-                app.mapImage.src = MAP_DATA[timeline.mapId];
-                app.mapImage.onload = () => {
-                    // Posiziona le unità dello scenario dopo che la mappa è stata caricata per garantire un ridimensionamento corretto
-                    // Per le timeline con mappa predefinita, le unità sono piazzate in base allo scenario predefinito
-                    if (timeline.scenario && timeline.scenario.length > 0) {
-                        timeline.scenario.forEach(unitData => {
-                            const gridX = Math.floor((unitData.x / 100) * app.gridWidth);
-                            const gridY = Math.floor((unitData.y / 100) * app.gridHeight);
-                            const unitInfo = timeline.units[unitData.type];
-                            placeUnit(unitData.type, unitData.faction, gridX, gridY, unitInfo.health, unitInfo.attack, unitInfo.movementRange, unitInfo.attackRange, unitInfo.maxMP, unitInfo.maxAP);
-                        });
-                    } else { // Se non c'è uno scenario predefinito ma c'è initialUnits, distribuisci
-                        distributeInitialUnits(timeline.initialUnits, timeline.units);
+            // Logica del bot (semplice):
+            // 1. Per ogni unità nemica:
+            //    a. Cerca un'unità del giocatore a portata d'attacco. Se sì, attacca.
+            //    b. Altrimenti, cerca di muoversi verso l'unità del giocatore più vicina.
+
+            let actionsTaken = 0;
+            for (const enemyUnit of enemyUnits) {
+                if (enemyUnit.ap > 0) {
+                    const attackable = getAttackableCells(enemyUnit);
+                    const targetToAttack = attackable.map(cell => getUnitAtGrid(cell.x, cell.y)).find(u => u && u.team === 'player');
+                    if (targetToAttack) {
+                        // Simula l'attacco del bot (senza minigioco)
+                        const damage = enemyUnit.attack; // Danno base per il bot
+                        targetToAttack.health -= damage;
+                        addGameMessage(`${enemyUnit.name} (Bot) ha attaccato ${targetToAttack.name} infliggendo ${damage.toFixed(0)} danni.`);
+                        enemyUnit.ap--;
+                        actionsTaken++;
+                        if (targetToAttack.health <= 0) {
+                            addGameMessage(`${targetToAttack.name} è stato sconfitto!`);
+                            removeUnit(targetToAttack);
+                            // Se non ci sono più unità del giocatore, termina il gioco
+                            if (app.markers.filter(u => u.team === 'player').length === 0) {
+                                addGameMessage("Tutte le unità del giocatore sono state sconfitte! Il bot ha vinto!");
+                                render();
+                                return;
+                            }
+                        }
                     }
                 }
-            } else {
-                // Per le mappe casuali, distribuisci le unità iniziali dopo la generazione della mappa
-                distributeInitialUnits(timeline.initialUnits, timeline.units);
+
+                if (enemyUnit.mp > 0 && enemyUnit.ap > 0) { // Move only if still has AP or no attack target
+                    // Se non ha attaccato o ha ancora MP, prova a muoversi
+                    const closestPlayerUnit = playerUnits.reduce((closest, current) => {
+                        const distCurrent = Math.abs(enemyUnit.gridX - current.gridX) + Math.abs(enemyUnit.gridY - current.gridY);
+                        const distClosest = closest ? Math.abs(enemyUnit.gridX - closest.gridX) + Math.abs(enemyUnit.gridY - closest.gridY) : Infinity;
+                        return distCurrent < distClosest ? current : closest;
+                    }, null);
+
+                    if (closestPlayerUnit) {
+                        const path = findPath(enemyUnit.gridX, enemyUnit.gridY, closestPlayerUnit.gridX, closestPlayerUnit.gridY);
+                        if (path.length > 0) {
+                            // Muovi solo di una parte del percorso per non consumare tutti i MP in un colpo solo
+                            const moveSteps = Math.min(enemyUnit.movementRange, path.length);
+                            if (moveSteps > 0) {
+                                const targetCell = path[moveSteps - 1];
+                                if (!getUnitAtGrid(targetCell.x, targetCell.y)) { // Assicurati che la cella target non sia occupata
+                                    enemyUnit.path = path.slice(0, moveSteps); // Set path for animation
+                                    enemyUnit.moving = true;
+                                    enemyUnit.mp = 0; // Consuma MP
+                                    addGameMessage(`${enemyUnit.name} (Bot) si sta muovendo verso ${closestPlayerUnit.name}.`);
+                                    actionsTaken++;
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            
-            populateUnitPalette(timeline.units);
-        }
 
-        function distributeInitialUnits(initialUnitsConfig, unitDefinitions) {
-            const playerUnitsToPlace = [];
-            const enemyUnitsToPlace = [];
-
-            initialUnitsConfig.forEach(unitTypeConfig => {
-                const totalCount = unitTypeConfig.count;
-                const playerCount = Math.ceil(totalCount / 2); // Arrotonda per eccesso per il giocatore 1
-                const enemyCount = totalCount - playerCount;
-
-                for (let i = 0; i < playerCount; i++) {
-                    playerUnitsToPlace.push(unitTypeConfig.type);
-                }
-                for (let i = 0; i < enemyCount; i++) {
-                    enemyUnitsToPlace.push(unitTypeConfig.type);
-                }
-            });
-
-            // Mescola le unità per un posizionamento casuale
-            shuffleArray(playerUnitsToPlace);
-            shuffleArray(enemyUnitsToPlace);
-
-            // Piazza le unità del giocatore (sinistra metà mappa)
-            playerUnitsToPlace.forEach(unitType => {
-                const unitInfo = unitDefinitions[unitType];
-                let placed = false;
-                let attempts = 0;
-                const maxAttempts = 100; // Evita loop infiniti su mappe affollate
-
-                while (!placed && attempts < maxAttempts) {
-                    const gridX = Math.floor(Math.random() * (app.gridWidth / 2)); // Metà sinistra
-                    const gridY = Math.floor(Math.random() * app.gridHeight);
-                    if (!getUnitAtGridPos(gridX, gridY)) {
-                        placeUnit(unitType, 'player', gridX, gridY, unitInfo.health, unitInfo.attack, unitInfo.movementRange, unitInfo.attackRange, unitInfo.maxMP, unitInfo.maxAP);
-                        placed = true;
-                    }
-                    attempts++;
-                }
-                if (!placed) {
-                    addGameMessage(`Attenzione: Impossibile posizionare l'unità ${unitType} per il giocatore.`);
-                }
-            });
-
-            // Piazza le unità nemiche (destra metà mappa)
-            enemyUnitsToPlace.forEach(unitType => {
-                const unitInfo = unitDefinitions[unitType];
-                let placed = false;
-                let attempts = 0;
-                const maxAttempts = 100;
-
-                while (!placed && attempts < maxAttempts) {
-                    const gridX = Math.floor(Math.random() * (app.gridWidth / 2)) + Math.ceil(app.gridWidth / 2); // Metà destra
-                    const gridY = Math.floor(Math.random() * app.gridHeight);
-                    if (!getUnitAtGridPos(gridX, gridY)) {
-                        placeUnit(unitType, 'enemy', gridX, gridY, unitInfo.health, unitInfo.attack, unitInfo.movementRange, unitInfo.attackRange, unitInfo.maxMP, unitInfo.maxAP);
-                        placed = true;
-                    }
-                    attempts++;
-                }
-                if (!placed) {
-                    addGameMessage(`Attenzione: Impossibile posizionare l'unità ${unitType} per il nemico.`);
-                }
-            });
-        }
-
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]]; // Scambia gli elementi
+            if (actionsTaken === 0) {
+                addGameMessage("Il bot non ha azioni da compiere in questo turno.");
             }
+
+            render();
+            // Termina il turno del bot dopo un breve ritardo per le animazioni
+            setTimeout(endTurn, 1500);
         }
 
-        function resetCurrentTimeline() {
-            addGameMessage(`Reset della timeline: ${TIMELINES[app.currentTimeline].name}`);
-            loadTimeline(app.currentTimeline); // Ricarica la timeline corrente
-        }
 
-        function clearMap() {
+        /**
+         * Resetta la mappa, rimuovendo tutte le unità e ripristinando lo stato iniziale.
+         */
+        function resetMap() {
             app.markers = [];
-            app.nextUnitId = 0;
-            app.terrainGrid = []; // Pulisci il terreno per le mappe personalizzate/casuali
-        }
-
-        function resetDeaths() {
+            app.selectedUnit = null;
+            app.selectedUnitType = null;
+            app.isPlayerTurn = true;
             app.playerDeaths = 0;
             app.enemyDeaths = 0;
-            document.getElementById('player-deaths').innerText = app.playerDeaths;
-            document.getElementById('enemy-deaths').innerText = app.enemyDeaths;
-        }
-        
-        // --- FUNZIONI DI UTILITÀ E GRAFICA ---
-        async function preloadAllIcons() {
-            const promises = [];
-            // Itera attraverso tutti i possibili tipi di unità in tutte le timeline
-            for (const timelineKey in TIMELINES) {
-                for (const unitType in TIMELINES[timelineKey].units) {
-                    ['player', 'enemy'].forEach(faction => {
-                        const cacheKey = `${unitType}_${faction}`;
-                        if (!app.iconCache[cacheKey]) {
-                            promises.push(
-                                new Promise(resolve => {
-                                    const icon = new Image();
-                                    const svgString = getIconSVG(unitType, faction);
-                                    icon.src = 'data:image/svg+xml;base64,' + btoa(svgString);
-                                    icon.onload = () => {
-                                        app.iconCache[cacheKey] = icon;
-                                        resolve();
-                                    };
-                                    icon.onerror = () => {
-                                        console.error(`Failed to load icon for ${cacheKey}`);
-                                        resolve(); // Risolvi comunque per non bloccare
-                                    };
-                                })
-                            );
-                        }
-                    });
-                }
-            }
-            return Promise.all(promises);
+            app.gameMessages = [];
+            updateDeathCounts();
+            updateTurnIndicator();
+            addGameMessage("Mappa resettata. Inizia una nuova partita!");
+            loadTimeline(app.currentTimeline); // Ricarica la timeline per resettare anche la mappa di sfondo/terreno
+            render();
         }
 
-        async function preloadTerrainTiles() {
-            const promises = [];
-            for (const type in app.terrainColors) {
-                if (!app.terrainTileImages[type]) {
-                    promises.push(new Promise(resolve => {
-                        const img = new Image();
-                        // Using placehold.co for colored squares as textures
-                        img.src = `https://placehold.co/${app.cellSize}x${app.cellSize}/${app.terrainColors[type].substring(1)}/ffffff?text=`; // Remove # from color
-                        img.onload = () => {
-                            app.terrainTileImages[type] = img;
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            console.error(`Failed to load terrain tile for ${type}`);
-                            resolve();
-                        };
-                    }));
-                }
-            }
-            return Promise.all(promises);
-        }
-
-        function getIconSVG(unitType, faction) {
-            const color = faction === 'player' ? '#3b82f6' : '#ef4444'; // Blu per giocatore, Rosso per nemico
-            const strokeColor = '#ffffff'; // Tratto bianco per visibilità
-            if (!SVG_ICONS[unitType]) return '';
-            return SVG_ICONS[unitType]
-                .replace(/stroke="currentColor"/g, `stroke="${strokeColor}"`)
-                .replace(/fill="none"/g, `fill="${color}"`);
-        }
-        
-        function populateUnitPalette(unitsConfig) {
-            const unitList = document.getElementById('unit-list');
-            unitList.innerHTML = ''; // Pulisci le unità precedenti
-
-            for (const unitType in unitsConfig) {
-                const unitInfo = unitsConfig[unitType];
-                const unitDiv = document.createElement('div');
-                unitDiv.className = 'flex flex-col items-center p-2 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition unit-button';
-                
-                unitDiv.innerHTML = `
-                    <div class="unit-icon-svg">${getIconSVG(unitType, 'player')}</div>
-                    <span class="text-xs mt-1">${unitInfo.name}</span>
-                    <span class="text-xs text-gray-400">HP: ${unitInfo.health} ATK: ${unitInfo.attack}</span>
-                    <span class="text-xs text-gray-400">MP: ${unitInfo.maxMP} AR: ${unitInfo.attackRange}</span>
-                `;
-
-                unitDiv.addEventListener('click', () => {
-                    deselectAll();
-                    app.selectedUnitType = unitType;
-                    unitDiv.classList.add('ring-2', 'ring-yellow-400');
-                    addGameMessage(`Unità "${unitInfo.name}" selezionata dalla palette.`);
-                });
-                unitList.appendChild(unitDiv);
-            }
-        }
-        
-        function updateTurnIndicators() {
+        /**
+         * Aggiorna gli indicatori di turno nell'interfaccia utente.
+         */
+        function updateTurnIndicator() {
             const playerIndicator = document.getElementById('player-turn-indicator');
             const enemyIndicator = document.getElementById('enemy-turn-indicator');
+
             if (app.isPlayerTurn) {
-                playerIndicator.classList.replace('bg-gray-700', 'bg-blue-600');
-                playerIndicator.classList.replace('border-gray-600', 'border-blue-400');
+                playerIndicator.classList.remove('bg-gray-700', 'border-gray-600');
+                playerIndicator.classList.add('bg-blue-600', 'border-blue-400', 'shadow-md');
                 playerIndicator.querySelector('span').classList.remove('text-gray-400');
-                playerIndicator.classList.add('shadow-md');
-                
-                enemyIndicator.classList.replace('bg-red-600', 'bg-gray-700');
-                enemyIndicator.classList.replace('border-red-400', 'border-gray-600');
+                playerIndicator.querySelector('span').classList.add('text-white');
+
+                enemyIndicator.classList.remove('bg-red-600', 'border-red-400', 'shadow-md');
+                enemyIndicator.classList.add('bg-gray-700', 'border-gray-600');
+                enemyIndicator.querySelector('span').classList.remove('text-white');
                 enemyIndicator.querySelector('span').classList.add('text-gray-400');
-                enemyIndicator.classList.remove('shadow-md');
             } else {
-                enemyIndicator.classList.replace('bg-gray-700', 'bg-red-600');
-                enemyIndicator.classList.replace('border-red-400', 'border-gray-600');
+                enemyIndicator.classList.remove('bg-gray-700', 'border-gray-600');
+                enemyIndicator.classList.add('bg-red-600', 'border-red-400', 'shadow-md');
                 enemyIndicator.querySelector('span').classList.remove('text-gray-400');
-                enemyIndicator.classList.add('shadow-md');
+                enemyIndicator.querySelector('span').classList.add('text-white');
 
-                playerIndicator.classList.replace('bg-blue-600', 'bg-gray-700');
-                playerIndicator.classList.replace('border-blue-400', 'border-gray-600');
+                playerIndicator.classList.remove('bg-blue-600', 'border-blue-400', 'shadow-md');
+                playerIndicator.classList.add('bg-gray-700', 'border-gray-600');
+                playerIndicator.querySelector('span').classList.remove('text-white');
                 playerIndicator.querySelector('span').classList.add('text-gray-400');
-                playerIndicator.classList.remove('shadow-md');
             }
         }
 
+        /**
+         * Aggiorna i contatori di morte nell'interfaccia utente.
+         */
+        function updateDeathCounts() {
+            document.getElementById('player-deaths').textContent = app.playerDeaths;
+            document.getElementById('enemy-deaths').textContent = app.enemyDeaths;
+        }
+
+        /**
+         * Aggiunge un messaggio al log del gioco.
+         * @param {string} message - Il messaggio da aggiungere.
+         */
         function addGameMessage(message) {
-            const messageLog = document.getElementById('game-messages');
-            const p = document.createElement('p');
-            p.textContent = message;
-            messageLog.prepend(p); // Aggiungi in cima
-            
-            // Mantieni solo gli ultimi N messaggi
-            while (messageLog.children.length > app.maxGameMessages) {
-                messageLog.removeChild(messageLog.lastChild);
+            app.gameMessages.push(message);
+            if (app.gameMessages.length > app.maxGameMessages) {
+                app.gameMessages.shift(); // Rimuovi il messaggio più vecchio
             }
+            const messagesDiv = document.getElementById('game-messages');
+            messagesDiv.innerHTML = app.gameMessages.map(msg => `<p>${msg}</p>`).join('');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scorri verso il basso
         }
 
-        // --- FUNZIONI DI DISEGNO DELLA MAPPA PERSONALIZZATA/CASUALE ---
-        function generateRandomTerrainMap() {
-            app.terrainGrid = [];
-            const terrainTypes = ['grass', 'water', 'mountain', 'forest', 'desert'];
-            const commonTerrain = 'grass';
-            const waterChance = 0.15; // 15% chance for water
-            const mountainChance = 0.05; // 5% chance for mountain
-            const forestChance = 0.1; // 10% chance for forest
-            const desertChance = 0.05; // 5% chance for desert
-
-            for (let y = 0; y < app.gridHeight; y++) {
-                app.terrainGrid.push([]);
-                for (let x = 0; x < app.gridWidth; x++) {
-                    let chosenTerrain = commonTerrain;
-                    const rand = Math.random();
-                    if (rand < waterChance) {
-                        chosenTerrain = 'water';
-                    } else if (rand < waterChance + mountainChance) {
-                        chosenTerrain = 'mountain';
-                    } else if (rand < waterChance + mountainChance + forestChance) {
-                        chosenTerrain = 'forest';
-                    } else if (rand < waterChance + mountainChance + forestChance + desertChance) {
-                        chosenTerrain = 'desert';
-                    }
-                    app.terrainGrid[y].push(chosenTerrain);
-                }
-            }
-            addGameMessage('Mappa casuale generata.');
-        }
-
-        // Questa funzione è per il disegno manuale, non viene usata per le mappe casuali generate automaticamente
-        function drawTerrainAt(pos) {
-            const { terrainGrid, selectedTerrain, gridWidth, gridHeight } = app;
-            const gridX = pos.gridX;
-            const gridY = pos.gridY;
-
-            if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
-                terrainGrid[gridY][gridX] = selectedTerrain;
-            }
-        }
-
-        // --- ESECUZIONE SCRIPT ---
-        document.addEventListener('DOMContentLoaded', initializeApp);
+        // Inizializza l'applicazione quando il DOM è completamente caricato
+        window.onload = initializeApp;
     </script>
 </body>
 </html>
