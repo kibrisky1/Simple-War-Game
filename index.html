@@ -249,7 +249,7 @@
             markers: [], // Array di oggetti unità
             selectedUnitType: null, // Tipo di unità selezionata dalla palette
             selectedUnit: null, // Oggetto unità attualmente selezionato sulla mappa
-            isPlayerTurn: true,
+            isPlayerTurn: true, // true per il giocatore, false per il nemico
             nextUnitId: 0,
             currentTimeline: 'ww2',
             mapImage: new Image(), // Per mappe predefinite (es. mappa del mondo)
@@ -1153,7 +1153,9 @@
             if (app.selectedUnitType) {
                 // Se un tipo di unità è selezionato dalla palette, prova a posizionarlo
                 if (!clickedUnit) { // Se la cella è vuota
-                    placeUnit(gridX, gridY, app.selectedUnitType, 'player'); // Posiziona sempre come giocatore
+                    // Posiziona l'unità in base al turno corrente
+                    const teamToPlace = app.isPlayerTurn ? 'player' : 'enemy';
+                    placeUnit(gridX, gridY, app.selectedUnitType, teamToPlace);
                 } else {
                     addGameMessage("Cella già occupata da un'unità. Deseleziona il tipo di unità per interagire con le unità esistenti.");
                 }
@@ -1166,40 +1168,38 @@
                     app.highlightedMoveCells = [];
                     app.highlightedAttackCells = [];
                     addGameMessage("Unità deselezionata.");
-                } else if (app.selectedUnit && app.selectedUnit.team === 'player' && clickedUnit.team === 'enemy' && app.highlightedAttackCells.some(c => c.x === gridX && c.y === gridY)) {
-                    // Attacca un'unità nemica se una unità del giocatore è selezionata e l'attacco è possibile
-                    if (app.selectedUnit.ap > 0) {
-                        startMinigame(app.selectedUnit, clickedUnit);
-                    } else {
-                        addGameMessage("Questa unità ha esaurito i Punti Azione (AP).");
-                    }
                 } else {
-                    // Seleziona qualsiasi unità per l'ispezione, ma consenti azioni solo se è il turno/squadra corretto
+                    // Seleziona la nuova unità
                     app.selectedUnit = clickedUnit;
-                    app.highlightedMoveCells = []; // Cancella le evidenziazioni per qualsiasi nuova selezione
-                    app.highlightedAttackCells = []; // Cancella le evidenziazioni per qualsiasi nuova selezione
+                    app.highlightedMoveCells = []; // Resetta le evidenziazioni
+                    app.highlightedAttackCells = []; // Resetta le evidenziazioni
 
-                    if (clickedUnit.team === 'player' && app.isPlayerTurn) {
-                        // Se è un'unità del giocatore e il turno del giocatore, calcola le evidenziazioni
+                    // Mostra le opzioni di movimento/attacco solo se è il turno della squadra dell'unità selezionata
+                    const currentTurnTeam = app.isPlayerTurn ? 'player' : 'enemy';
+                    if (clickedUnit.team === currentTurnTeam) {
                         app.highlightedMoveCells = getReachableCells(clickedUnit);
                         app.highlightedAttackCells = getAttackableCells(clickedUnit);
                         addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). MP: ${clickedUnit.mp}, AP: ${clickedUnit.ap}`);
                     } else {
-                        // Unità selezionata, ma non può agire (es. unità nemica durante il turno del giocatore, o unità del giocatore durante il turno del nemico)
-                        addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). Non puoi agire con questa unità in questo momento.`);
+                        addGameMessage(`Unità selezionata: ${clickedUnit.name} (ID: ${clickedUnit.id}). Non è il turno di questa squadra.`);
                     }
                 }
             } else if (app.selectedUnit) {
                 // Se un'unità è selezionata e si clicca su una cella vuota
-                if (app.highlightedMoveCells.some(c => c.x === gridX && c.y === gridY)) {
-                    // Muovi l'unità selezionata se la cella è raggiungibile
-                    if (app.selectedUnit.mp > 0) {
-                        moveUnit(app.selectedUnit, gridX, gridY);
+                const currentTurnTeam = app.isPlayerTurn ? 'player' : 'enemy';
+                if (app.selectedUnit.team === currentTurnTeam) { // Controlla che l'unità selezionata appartenga alla squadra del turno corrente
+                    if (app.highlightedMoveCells.some(c => c.x === gridX && c.y === gridY)) {
+                        // Muovi l'unità selezionata se la cella è raggiungibile
+                        if (app.selectedUnit.mp > 0) {
+                            moveUnit(app.selectedUnit, gridX, gridY);
+                        } else {
+                            addGameMessage("Questa unità ha esaurito i Punti Movimento (MP).");
+                        }
                     } else {
-                        addGameMessage("Questa unità ha esaurito i Punti Movimento (MP).");
+                        addGameMessage("Cella non valida per il movimento.");
                     }
                 } else {
-                    addGameMessage("Cella non valida per il movimento o l'attacco.");
+                    addGameMessage("Non puoi muovere questa unità in questo turno.");
                 }
             }
             render();
@@ -1741,8 +1741,13 @@
             // Per semplicità, useremo app.selectedUnit e l'unità target che è stata attaccata l'ultima volta
             // In un gioco reale, queste sarebbero passate come parametri o recuperate da uno stato più robusto.
             const attackingUnit = app.selectedUnit; // Assumiamo che l'unità selezionata sia quella che attacca
-            const targetCell = app.highlightedAttackCells.find(cell => getUnitAtGrid(cell.x, cell.y) && getUnitAtGrid(cell.x, cell.y).team !== attackingUnit.team);
+            // Trova l'unità nemica che è stata attaccata
+            const targetCell = app.highlightedAttackCells.find(cell => {
+                const unit = getUnitAtGrid(cell.x, cell.y);
+                return unit && unit.team !== attackingUnit.team;
+            });
             const defendingUnit = targetCell ? getUnitAtGrid(targetCell.x, targetCell.y) : null;
+
 
             if (attackingUnit && defendingUnit) {
                 const damage = attackingUnit.attack * damageMultiplier;
@@ -1784,6 +1789,7 @@
             updateTurnIndicator();
             addGameMessage(`Turno terminato. Ora è il turno ${app.isPlayerTurn ? 'del Giocatore' : 'del Nemico'}.`);
 
+            // Se la modalità è PvB e ora è il turno del bot, avvia il turno del bot
             if (!app.isPlayerTurn && app.gameMode === 'player-vs-bot') {
                 setTimeout(botTurn, 1000); // Ritarda il turno del bot per visibilità
             }
